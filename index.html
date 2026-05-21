@@ -165,13 +165,22 @@
     .thread-view-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
     .thread-view-sub { font-size: 12px; color: var(--text2); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
     .updates-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-    .update-entry { background: var(--surface); border-radius: 10px; padding: 10px 12px; border-left: 3px solid var(--accent); }
-    .update-entry.eod-source { border-left-color: var(--eod-color); }
-    .update-entry.update-source { border-left-color: #10b981; }
-    .update-entry.ai-source { border-left-color: var(--accent); }
+    .update-entry { background: var(--surface); border-radius: 10px; padding: 10px 12px; border-left: none; border-right: 3px solid #9ca3af; }
+    .update-entry.eod-source    { border-right: none; border-left: 3px solid var(--eod-color); }
+    .update-entry.update-source { border-right: none; border-left: 3px solid #10b981; }
+    .update-entry.ai-source     { border-right: none; border-left: 3px solid #3b82f6; }
     .update-banner { background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; padding: 7px 12px; margin-bottom: 8px; font-size: 12px; color: #10b981; font-weight: 600; text-align: center; }
     .update-tag { background: rgba(16,185,129,0.15); color: #10b981; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
-    .update-ai-tag { background: rgba(212,175,55,0.15); color: var(--accent); font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
+    .update-ai-tag { background: rgba(59,130,246,0.15); color: #3b82f6; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
+    .thread-copy-btn { margin-top: 6px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 11px; cursor: pointer; transition: all 0.15s; display: inline-block; }
+    .thread-copy-btn:hover { background: var(--surface2); }
+    /* Thread card footer */
+    .thread-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
+    .gmail-card-btn { background: none; border: none; font-size: 16px; cursor: pointer; padding: 2px 4px; border-radius: 6px; line-height: 1; opacity: 0.7; transition: opacity 0.15s; }
+    .gmail-card-btn:hover { opacity: 1; }
+    /* Gmail button in chat */
+    .gmail-chat-btn { margin-top: 6px; padding: 5px 12px; border-radius: 8px; border: 1px solid #ea4335; background: none; color: #ea4335; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s; display: inline-block; }
+    .gmail-chat-btn:hover { background: rgba(234,67,53,0.08); }
     /* Thread mode toggle */
     .thread-mode-row { display: flex; gap: 6px; margin-bottom: 8px; }
     .thread-mode-btn { flex: 1; padding: 7px 0; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
@@ -420,6 +429,10 @@
             <label className="form-lbl">Decision Options</label>
             <textarea className="form-ta" value={form.decisionOptions || ''} onChange={set('decisionOptions')} placeholder="What are the options? (or use ✨ AI Suggest in Threads)"/>
           </div>
+          <div className="form-group">
+            <label className="form-lbl">Email Link</label>
+            <input className="form-inp" type="url" value={form.email || ''} onChange={set('email')} placeholder="https://..."/>
+          </div>
           <div className="btn-row">
             <button className="btn btn-primary" onClick={() => onSave(form)} disabled={!form.title?.trim()}>
               {isNew ? 'Add Task' : 'Save Changes'}
@@ -627,7 +640,7 @@ ACTION:{"type":"TYPE","payload":{...}}
         const { type, payload } = JSON.parse(match[1]);
         if (type === 'ADD') {
           const id = uid();
-          nextTasks[id] = { id, title: payload.title, category: payload.category || categories[0]?.id || 'todo', dueDate: payload.dueDate, notes: payload.notes||'', status: payload.status||'open', decisionQuestion: payload.decisionQuestion||'', decisionOptions: payload.decisionOptions||'', createdAt: now(), updatedAt: now() };
+          nextTasks[id] = { id, title: payload.title, category: payload.category || categories[0]?.id || 'todo', dueDate: payload.dueDate, notes: payload.notes||'', status: payload.status||'open', decisionQuestion: payload.decisionQuestion||'', decisionOptions: payload.decisionOptions||'', email: payload.email||'', createdAt: now(), updatedAt: now() };
           if (!nextThreads[id]) nextThreads[id] = { messages: [] };
         } else if (type === 'EDIT') {
           if (nextTasks[payload.id]) nextTasks[payload.id] = { ...nextTasks[payload.id], ...payload.changes, updatedAt: now() };
@@ -876,7 +889,7 @@ If NO task matches:
       setTasks(nextTasks); setThreads(nextThreads); setEditTask(null);
     };
 
-    const newTaskTemplate = () => ({ id: uid(), title: '', category: categories[0]?.id||'todo', dueDate: '', notes: '', status: 'open', _exists: false });
+    const newTaskTemplate = () => ({ id: uid(), title: '', category: categories[0]?.id||'todo', dueDate: '', notes: '', status: 'open', decisionQuestion: '', decisionOptions: '', email: '', _exists: false });
 
     // ── Thread updates
     const addUpdate = (taskId, content) => {
@@ -951,11 +964,24 @@ If NO task matches:
         )}
         <div className="chat-messages">
           {chatHistory.length === 0 && <div className="chat-msg sys">Ready. Use the pills below or type anything.</div>}
-          {chatHistory.map((m, i) => (
-            <div key={i} className={`chat-msg ${m.role === 'user' ? 'user' : 'ai'}`}>
-              <span className="fmt" dangerouslySetInnerHTML={{ __html: fmtHtml(m._show || m.content) }}/>
-            </div>
-          ))}
+          {chatHistory.map((m, i) => {
+            const displayText = m._show || m.content;
+            const isEmail = m.role === 'assistant' && /subject\s*:/i.test(displayText);
+            const gmailUrl = () => {
+              const subMatch = displayText.match(/subject\s*:\s*(.+)/i);
+              const su = subMatch ? subMatch[1].trim() : '';
+              const body = displayText.replace(/subject\s*:.*\n?/i, '').trim();
+              return `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(su)}&body=${encodeURIComponent(body)}`;
+            };
+            return (
+              <div key={i} className={`chat-msg ${m.role === 'user' ? 'user' : 'ai'}`}>
+                <span className="fmt" dangerouslySetInnerHTML={{ __html: fmtHtml(displayText) }}/>
+                {isEmail && (
+                  <div><button className="gmail-chat-btn" onClick={() => window.open(gmailUrl(), '_blank')}>📧 Open in Gmail</button></div>
+                )}
+              </div>
+            );
+          })}
           {aiLoading && <div className="chat-msg ai"><div className="typing-dots"><span/><span/><span/></div></div>}
           <div ref={chatEndRef}/>
         </div>
@@ -966,6 +992,7 @@ If NO task matches:
             <button className="pill" onClick={() => setChatInput('Add task: ')}>＋ Add Task</button>
             <button className="pill" onClick={() => setChatInput('Update task: ')}>✏️ Update Task</button>
             <button className="pill eod-pill" onClick={startEod} disabled={aiLoading}>📊 Generate EOD</button>
+            <button className="pill" onClick={() => { if (window.confirm('Clear chat history?')) setChatHistory([]); }}>🗑️ Clear Chat</button>
           </div>
           <div className="chat-row">
             <textarea
@@ -1116,16 +1143,29 @@ If NO task matches:
               {thread.messages.length === 0 && <div className="thread-empty">No updates yet. Add one below or run EOD.</div>}
               {thread.messages.map(m => (
                 <div key={m.id} className={`update-entry ${m.source === 'eod' ? 'eod-source' : m.source === 'update' ? 'update-source' : m.source === 'ai' ? 'ai-source' : ''}`}>
-                  <div className="update-text">{m.content}</div>
+                  {m.source === 'ai'
+                    ? <div className="update-text" dangerouslySetInnerHTML={{ __html: fmtHtml(m.content) }}/>
+                    : <div className="update-text">{m.content}</div>
+                  }
                   <div className="update-meta">
                     {fmtTime(m.timestamp)}
                     {m.source === 'eod'    && <span className="update-eod-tag">EOD</span>}
                     {m.source === 'update' && <span className="update-tag">UPDATE</span>}
                     {m.source === 'ai'     && <span className="update-ai-tag">AI</span>}
                   </div>
+                  {m.source === 'ai' && (
+                    <button className="thread-copy-btn" onClick={() => { navigator.clipboard.writeText(m.content); setCopiedId(m.id); setTimeout(() => setCopiedId(null), 1500); }}>
+                      {copiedId === m.id ? '✓ Copied' : '⎘ Copy'}
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
+            {threadAiLoading && (
+              <div className="update-entry ai-source" style={{ opacity: 0.7 }}>
+                <div className="typing-dots"><span/><span/><span/></div>
+              </div>
+            )}
             <div className="thread-mode-row">
               <button className={`thread-mode-btn ${threadMode==='log' ? 'active' : ''}`} onClick={() => setThreadMode('log')}>📝 Log</button>
               <button className={`thread-mode-btn ${threadMode==='assist' ? 'active' : ''}`} onClick={() => setThreadMode('assist')}>✨ Assist</button>
@@ -1169,7 +1209,14 @@ If NO task matches:
                   {col && <span style={{ color: col.color, fontWeight: 600 }}> · {col.label}</span>}
                   {isOverdue(task.dueDate, task.status) && ' · ⚠️ Overdue'}
                 </div>
-                <span className="thread-update-chip">🧵 {updates} update{updates !== 1 ? 's' : ''}</span>
+                <div className="thread-card-footer">
+                  <span className="thread-update-chip">🧵 {updates} update{updates !== 1 ? 's' : ''}</span>
+                  {task.email && (
+                    <button className="gmail-card-btn"
+                      onClick={e => { e.stopPropagation(); window.open(task.email, '_blank'); }}
+                      title="Open email link">📧</button>
+                  )}
+                </div>
               </div>
             );
           })}
