@@ -71,7 +71,7 @@
     .pill:active { transform: scale(0.94); }
     .pill.eod-pill { background: var(--eod-color); color: white; border-color: var(--eod-color); }
     .chat-row { display: flex; gap: 8px; align-items: flex-end; }
-    .chat-textarea { flex: 1; padding: 10px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; resize: none; min-height: 42px; max-height: 120px; outline: none; font-family: inherit; line-height: 1.4; transition: border-color 0.15s; }
+    .chat-textarea { flex: 1; padding: 10px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; resize: none; min-height: 42px; max-height: 240px; overflow-y: auto; outline: none; font-family: inherit; line-height: 1.4; transition: border-color 0.15s; }
     .chat-textarea:focus { border-color: var(--accent); }
     .send-btn { width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--accent); color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.15s; }
     .send-btn:disabled { opacity: 0.4; cursor: default; }
@@ -159,7 +159,7 @@
     .thread-card-meta { font-size: 12px; color: var(--text2); margin-bottom: 5px; }
     .thread-update-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: var(--surface2); color: var(--text2); }
     .thread-view-wrap { padding: 0 14px 16px; }
-    .thread-view-hdr { padding: 12px 0; border-bottom: 1px solid var(--border); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+    .thread-view-hdr { padding: 12px 14px; border-bottom: 1px solid var(--border); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; background: var(--bg); margin-left: -14px; margin-right: -14px; }
     .back-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--surface); color: var(--text); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .thread-view-info { flex: 1; }
     .thread-view-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
@@ -216,7 +216,7 @@
     .update-meta { font-size: 11px; color: var(--text2); margin-top: 4px; }
     .update-eod-tag { background: var(--eod-bg); color: var(--eod-color); font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
     .thread-input-row { display: flex; gap: 8px; align-items: flex-end; }
-    .thread-textarea { flex: 1; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; resize: none; min-height: 42px; max-height: 100px; font-family: inherit; outline: none; }
+    .thread-textarea { flex: 1; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; resize: none; min-height: 42px; max-height: 200px; overflow-y: auto; font-family: inherit; outline: none; }
     .thread-textarea:focus { border-color: var(--accent); }
     .thread-empty { text-align: center; color: var(--text2); font-size: 13px; padding: 30px 16px; }
 
@@ -485,7 +485,9 @@
     const priorTextRef     = useRef('');    // finalized text from completed sessions
     const sessionFinalRef  = useRef('');    // finalized text within current session
 
-    const chatEndRef = useRef(null);
+    const chatEndRef        = useRef(null);
+    const chatTextareaRef   = useRef(null);
+    const threadTextareaRef = useRef(null);
 
     // Persist
     useEffect(() => ls.set('ol-cats',    categories),    [categories]);
@@ -562,6 +564,18 @@
       }
     };
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatHistory, aiLoading]);
+    useEffect(() => {
+      const el = chatTextareaRef.current;
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 240) + 'px';
+    }, [chatInput]);
+    useEffect(() => {
+      const el = threadTextareaRef.current;
+      if (!el) return;
+      el.style.height = 'auto';
+      el.style.height = Math.min(el.scrollHeight, 200) + 'px';
+    }, [threadInput]);
     useEffect(() => { setDecisionDraft(null); setDecisionDraftLoading(false); setSummarizing(false); setThreadMode('log'); setThreadAiLoading(false); }, [activeThread]);
 
     const unreadCount = notifications.filter(n => !n.read).length;
@@ -996,6 +1010,7 @@ If NO task matches:
           </div>
           <div className="chat-row">
             <textarea
+              ref={chatTextareaRef}
               className="chat-textarea"
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
@@ -1171,7 +1186,7 @@ If NO task matches:
               <button className={`thread-mode-btn ${threadMode==='assist' ? 'active' : ''}`} onClick={() => setThreadMode('assist')}>✨ Assist</button>
             </div>
             <div className="thread-input-row">
-              <textarea className="thread-textarea" value={threadInput} onChange={e => setThreadInput(e.target.value)}
+              <textarea ref={threadTextareaRef} className="thread-textarea" value={threadInput} onChange={e => setThreadInput(e.target.value)}
                 placeholder={threadMode === 'assist' ? 'Ask AI about this task...' : 'Add an update...'}
                 rows={1}
                 onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); threadMode === 'assist' ? handleThreadAssist(threadInput) : addUpdate(activeThread, threadInput); } }}/>
