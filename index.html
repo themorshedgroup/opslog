@@ -171,6 +171,7 @@
     .update-entry.ai-source     { border-right: none; border-left: 3px solid #3b82f6; }
     .update-entry.agenda-source { border-right: none; border-left: 3px solid #f59e0b; }
     .agenda-pill { background: #f59e0b22; border-color: #f59e0b; color: #f59e0b; }
+    .accomplish-pill { background: #10b98122; border-color: #10b981; color: #10b981; }
     .agenda-banner { background: #fff8e7; border-color: #f59e0b; color: #b45309; }
     html.dark .agenda-banner { background: #2d1f00; border-color: #f59e0b; color: #fcd34d; }
     .update-banner { background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; padding: 7px 12px; margin-bottom: 8px; font-size: 12px; color: #10b981; font-weight: 600; text-align: center; }
@@ -330,7 +331,11 @@
     (text || '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1');
 
   const parseNumbered = (text) => {
-    const results = {}; const lines = text.split('\n');
+    // Normalize inline answers (e.g. "1. done 2. still working") to multi-line
+    const normalized = text.includes('\n')
+      ? text
+      : text.replace(/\s+(\d+[.)]\s)/g, '\n$1');
+    const results = {}; const lines = normalized.split('\n');
     let curNum = null; let curParts = [];
     for (const line of lines) {
       const m = line.match(/^(\d+)[.)]\s+(.+)/);
@@ -683,6 +688,7 @@ ACTION:{"type":"TYPE","payload":{...}}
       setChatHistory(prev => [...prev, { role: 'user', content: text, _show: text }]);
       setAiLoading(true);
       try {
+        if (text.toLowerCase().startsWith('accomplishment')) { await handleAccomplishment(text); return; }
         if (text.toLowerCase().startsWith('update task')) { await handleUpdateTaskFlow(text); return; }
         if (updateTaskState?.step === 'picking') { await handleUpdatePick(text); return; }
         if (agendaState?.step === 'asked') { await handleAgendaResponse(text); return; }
@@ -725,31 +731,67 @@ ACTION:{"type":"TYPE","payload":{...}}
 
     const handleEodResponse = async (responseText) => {
       try {
-        const numbered = parseNumbered(responseText); const eodTasks = eodState.tasks;
-        const nextThreads = { ...threads }; const savedUpdates = [];
+        const numbered = parseNumbered(responseText);
+        const eodTasks = eodState.tasks;
+        const nextThreads = { ...threads };
+
+        // Log numbered answers to respective task threads
         Object.entries(numbered).forEach(([numStr, updateText]) => {
           const idx = parseInt(numStr) - 1;
           if (idx >= 0 && idx < eodTasks.length) {
             const task = eodTasks[idx];
             if (!nextThreads[task.id]) nextThreads[task.id] = { messages: [] };
             nextThreads[task.id].messages.push({ id: uid(), content: updateText, timestamp: now(), source: 'eod' });
-            savedUpdates.push({ task, update: updateText });
           }
         });
-        setThreads(nextThreads); setEodState(null);
+        setThreads(nextThreads);
+        setEodState(null);
+
         const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-        const updateLines = savedUpdates.length
-          ? savedUpdates.map(({ task, update }) => {
-              let line = `• ${task.title} (Due: ${fmtDate(task.dueDate)}) — ${update}`;
-              if (task.decisionQuestion) line += `\n  Decision Question: ${task.decisionQuestion}`;
-              if (task.decisionOptions)  line += `\n  Options: ${task.decisionOptions}`;
-              return line;
-            }).join('\n')
-          : 'No updates provided.';
-        const summary = await callAI(
-          [{ role: 'user', content: `Generate an ultra-concise EOD summary for Tarek (CEO-level).\n\nDate: ${today}\nUpdates:\n${updateLines}\n\nRules:\n- For EACH task, write exactly ONE bullet: a one-line summary of what happened/status.\n- Add a SECOND bullet for that task ONLY if Tarek's decision or approval is needed — start it with "→ Decision needed: [question]".\n- If decision options are provided, add them on the line after as "   Options: [options]".\n- No greetings, no closing lines, no fluff.\n- Start with "EOD Update — ${today}" as a plain header (no bold markers).` }],
-          `You are OpsLog AI. Write an ultra-brief EOD for a CEO. One bullet per task (status summary). For decision tasks, always include the decision question and options. No extra words.`
+        const todayStr = new Date().toISOString().slice(0, 10);
+
+        // SECTION 1 — Accomplishments: done tasks created/updated today
+        const todayDone = Object.values(tasks).filter(t =>
+          t.status === 'done' &&
+          (t.updatedAt?.slice(0,10) === todayStr || t.createdAt?.slice(0,10) === todayStr)
         );
+        const accomplishLines = todayDone.length
+          ? todayDone.map(t => `- ${t.title}${t.notes ? ': ' + t.notes : ''}`).join('\n')
+          : null;
+
+        // SECTION 2 — Task Updates: all open tasks, user update or current status
+        const taskUpdateLines = eodTasks.map((t, i) => {
+          const upd = numbered[i + 1];
+          return `- ${t.title}${t.dueDate ? ' (Due: ' + fmtDate(t.dueDate) + ')' : ''}: ${upd || t.notes || t.status}`;
+        }).join('\n');
+
+        // SECTION 3 — Decisions: all open tasks with a decisionQuestion
+        const decisionTasks = Object.values(tasks).filter(t => t.status !== 'done' && t.decisionQuestion);
+        const decisionLines = decisionTasks.length
+          ? decisionTasks.map((t, di) => {
+              let line = `${di + 1}. ${t.decisionQuestion}`;
+              if (t.decisionOptions) {
+                const opts = t.decisionOptions.split('\n')
+                  .map(o => o.replace(/^\d+[.)]\s*/, '').trim()).filter(Boolean);
+                'ABCDE'.split('').slice(0, opts.length).forEach((ltr, j) => {
+                  line += `\n   ${ltr}. ${opts[j]}`;
+                });
+              }
+              return line;
+            }).join('\n\n')
+          : null;
+
+        const promptParts = [
+          accomplishLines ? `ACCOMPLISHMENTS (completed today):\n${accomplishLines}` : null,
+          `OPEN TASK UPDATES:\n${taskUpdateLines}`,
+          decisionLines ? `DECISIONS REQUIRED:\n${decisionLines}` : null,
+        ].filter(Boolean).join('\n\n');
+
+        const summary = await callAI(
+          [{ role: 'user', content: `Date: ${today}\n\n${promptParts}\n\nWrite a clean EOD summary for Tarek (CEO) using these sections:\n**Accomplishments** (only if present above)\n**Task Updates** (one bullet per task)\n**Decisions Required** (keep numbered questions + A/B/C options; only if present above)\n\nStart with "EOD Update — ${today}". No greetings, no closing lines. Be concise.` }],
+          `You are OpsLog AI writing an EOD for a CEO. Preserve the Decisions A/B/C format exactly. Be brief.`
+        );
+
         setNotifications(prev => [{ id: uid(), content: summary, timestamp: now(), read: false }, ...prev]);
         setChatHistory(prev => [...prev, { role: 'assistant', content: summary, _show: `✅ Updates saved to threads. EOD summary added to Notifications.\n\n${summary}` }]);
       } catch (e) {
@@ -807,6 +849,38 @@ ACTION:{"type":"TYPE","payload":{...}}
       } catch (e) {
         setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
       }
+    };
+
+    // ── Accomplishments
+    const handleAccomplishment = async (text) => {
+      const content = text.replace(/^accomplishment[:\s]*/i, '').trim();
+      if (!content) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: 'What did you accomplish? Type it after "Accomplishment: "', _show: 'What did you accomplish? Type it after "Accomplishment: "' }]);
+        setAiLoading(false);
+        return;
+      }
+      try {
+        const aiJson = await callAI(
+          [{ role: 'user', content: `Accomplishment: "${content}"` }],
+          `Extract a concise task title (max 8 words) and any context or notes from this accomplishment. Reply ONLY with valid JSON: {"title": "...", "notes": "..."}`
+        );
+        let title = content.slice(0, 80), notes = '';
+        try {
+          const match = aiJson.match(/\{[\s\S]*?\}/);
+          if (match) { const p = JSON.parse(match[0]); title = p.title || title; notes = p.notes || ''; }
+        } catch {}
+        const today = new Date().toISOString().slice(0, 10);
+        const id = uid();
+        const newTask = { id, title, category: categories[0]?.id || 'todo', dueDate: today, notes, status: 'done', decisionQuestion: '', decisionOptions: '', email: '', createdAt: now(), updatedAt: now() };
+        setTasks(prev => ({ ...prev, [id]: newTask }));
+        const nextThreads = { ...threads };
+        if (!nextThreads[id]) nextThreads[id] = { messages: [] };
+        nextThreads[id].messages.push({ id: uid(), content: content, timestamp: now(), source: 'update' });
+        setThreads(nextThreads);
+        setChatHistory(prev => [...prev, { role: 'assistant', content: `✅ Accomplishment logged: **${title}**${notes ? '\n_' + notes + '_' : ''}`, _show: `✅ Accomplishment logged: **${title}**${notes ? '\n_' + notes + '_' : ''}` }]);
+      } catch (e) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
+      } finally { setAiLoading(false); }
     };
 
     // ── Smart Update Task
@@ -1063,6 +1137,7 @@ If NO task matches:
           {eodState?.step === 'asked' && <div className="eod-banner">📊 EOD Mode — reply with numbered answers (1. ... 2. ...)</div>}
           {updateTaskState?.step === 'picking' && <div className="update-banner">✏️ Update Mode — reply with the number of the thread to update</div>}
           <div className="pills">
+            <button className="pill accomplish-pill" onClick={() => setChatInput('Accomplishment: ')}>🏆 Accomplishments</button>
             <button className="pill" onClick={() => setChatInput('Add task: ')}>＋ Add Task</button>
             <button className="pill" onClick={() => setChatInput('Update task: ')}>✏️ Update Task</button>
             <button className="pill agenda-pill" onClick={startAgenda} disabled={aiLoading}>📋 Agenda</button>
