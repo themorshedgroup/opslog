@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TMG Ops Log</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    :root {
+      --bg: #ffffff;
+      --surface: #f5f5f7;
+      --surface2: #e8e8ed;
+      --border: #d8d8dc;
+      --text: #1a1a1a;
+      --text2: #6e6e73;
+      --accent: #0071e3;
+      --danger: #ef4444;
+      --eod-color: #8b5cf6;
+      --eod-bg: #f5f0ff;
+    }
+    html.dark {
+      --bg: #111111;
+      --surface: #1c1c1e;
+      --surface2: #2c2c2e;
+      --border: #3a3a3c;
+      --text: #f5f5f7;
+      --text2: #8e8e93;
+      --accent: #409cff;
+      --eod-bg: #1e0f3d;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+    .app { max-width: 500px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+
+    /* Header */
+    .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 100; }
+    .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+    .notif-badge { background: var(--danger); color: white; border-radius: 10px; font-size: 11px; font-weight: 700; padding: 2px 6px; min-width: 18px; text-align: center; }
+
+    /* Tabbar — fixed bottom, BrainDump style */
+    .tabbar { display: flex; border-top: 1px solid var(--border); background: var(--bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); position: fixed; bottom: 0; left: 0; right: 0; z-index: 99; padding-bottom: calc(env(safe-area-inset-bottom) + 4px); }
+    .tabbar button { flex: 1; padding: 8px 0 4px; border: none; background: none; color: var(--text2); font-size: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; transition: all 0.15s; position: relative; }
+    .tabbar button.active { color: var(--accent); }
+    .tab-icon { font-size: 22px; line-height: 1; position: relative; width: 44px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 12px; transition: all 0.2s ease; }
+    .tabbar button.active .tab-icon { background: linear-gradient(135deg, #a855f7, #3b82f6); box-shadow: 0 2px 12px rgba(168, 85, 247, 0.35); }
+    .tabbar button:not(.active) .tab-icon { filter: grayscale(1); opacity: 0.5; }
+    .tab-label { font-weight: 500; font-size: 10px; }
+    .tab-dot { position: absolute; top: 2px; right: 4px; background: var(--danger); color: white; border-radius: 8px; font-size: 9px; font-weight: 700; padding: 1px 4px; min-width: 14px; text-align: center; line-height: 1.4; }
+
+    /* Content */
+    .content { flex: 1; overflow-y: auto; padding-bottom: calc(env(safe-area-inset-bottom) + 68px); }
+
+    /* No-key banner */
+    .no-key-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px; margin: 14px; padding: 12px 14px; font-size: 13px; color: #856404; line-height: 1.4; }
+    html.dark .no-key-banner { background: #2d2200; border-color: #b08000; color: #ffd966; }
+    .no-key-banner strong { font-weight: 700; }
+
+    /* Chat */
+    .chat-wrap { display: flex; flex-direction: column; height: calc(100vh - 49px - 68px - env(safe-area-inset-bottom)); }
+    .chat-messages { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
+    .chat-msg { max-width: 88%; padding: 10px 13px; border-radius: 16px; font-size: 14px; line-height: 1.45; }
+    .chat-msg.user { background: var(--accent); color: white; align-self: flex-end; border-radius: 16px 16px 3px 16px; }
+    .chat-msg.ai { background: var(--surface); color: var(--text); align-self: flex-start; border-radius: 16px 16px 16px 3px; }
+    .chat-msg.sys { background: var(--surface2); color: var(--text2); align-self: center; font-size: 12px; border-radius: 8px; padding: 7px 12px; max-width: 100%; text-align: center; }
+    .chat-input-area { background: var(--bg); border-top: 1px solid var(--border); padding: 10px 14px 14px; flex-shrink: 0; }
+    .eod-banner { background: var(--eod-bg); border: 1px solid var(--eod-color); border-radius: 8px; padding: 7px 12px; margin-bottom: 8px; font-size: 12px; color: var(--eod-color); font-weight: 600; text-align: center; }
+    .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 9px; }
+    .pill { padding: 6px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.12s; }
+    .pill:active { transform: scale(0.94); }
+    .pill.eod-pill { background: var(--eod-color); color: white; border-color: var(--eod-color); }
+    .chat-row { display: flex; gap: 8px; align-items: flex-end; }
+    .chat-textarea { flex: 1; padding: 10px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; resize: none; min-height: 42px; max-height: 120px; outline: none; font-family: inherit; line-height: 1.4; transition: border-color 0.15s; }
+    .chat-textarea:focus { border-color: var(--accent); }
+    .send-btn { width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--accent); color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.15s; }
+    .send-btn:disabled { opacity: 0.4; cursor: default; }
+    .typing-dots { display: flex; gap: 4px; padding: 4px 2px; align-items: center; }
+    .typing-dots span { width: 7px; height: 7px; background: var(--text2); border-radius: 50%; animation: bounce 1.2s ease-in-out infinite; }
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce { 0%,60%,100% { transform:translateY(0); } 30% { transform:translateY(-7px); } }
+
+    /* Board */
+    .board { padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
+    .board-toolbar { display: flex; gap: 8px; }
+    .board-add-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border-radius: 10px; border: 1.5px dashed var(--border); background: none; color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer; }
+    .board-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .board-settings-btn { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .board-settings-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .column { border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
+    .col-header { padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: var(--surface); border-left: 4px solid transparent; }
+    .col-header-left { display: flex; align-items: center; gap: 8px; }
+    .col-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    .col-label { font-weight: 600; font-size: 13px; }
+    .col-count { background: var(--surface2); border-radius: 10px; padding: 1px 7px; font-size: 12px; font-weight: 600; color: var(--text2); }
+    .col-chevron { font-size: 11px; color: var(--text2); }
+    .task-list { padding: 8px; display: flex; flex-direction: column; gap: 6px; background: var(--bg); }
+    .task-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: transform 0.1s; }
+    .task-card:active { transform: scale(0.98); }
+    .task-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+    .task-title { font-size: 14px; font-weight: 500; line-height: 1.3; }
+    .task-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .due-badge { font-size: 11px; color: var(--text2); }
+    .due-badge.overdue { color: var(--danger); font-weight: 600; }
+    /* Status chips */
+    .status-chip { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.3px; flex-shrink: 0; white-space: nowrap; }
+    .status-chip.open       { background: #dbeafe; color: #1d4ed8; }
+    .status-chip.in-progress { background: #fef3c7; color: #b45309; }
+    .status-chip.decision   { background: #f5f0ff; color: #7c3aed; }
+    .status-chip.done       { background: #d1fae5; color: #065f46; }
+    html.dark .status-chip.open       { background: #1e3a5f; color: #93c5fd; }
+    html.dark .status-chip.in-progress { background: #2d1f00; color: #fcd34d; }
+    html.dark .status-chip.decision   { background: #1e0f3d; color: #c4b5fd; }
+    html.dark .status-chip.done       { background: #052e16; color: #6ee7b7; }
+    .col-empty { padding: 14px; text-align: center; color: var(--text2); font-size: 13px; background: var(--bg); }
+
+    /* Modal */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
+    .modal { background: var(--bg); border-radius: 20px 20px 0 0; padding: 20px 20px 40px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 18px; }
+    .modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
+    .modal-hdr-title { font-size: 17px; font-weight: 700; }
+    .icon-btn { width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--surface2); color: var(--text); font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .form-group { margin-bottom: 14px; }
+    .form-lbl { font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 5px; }
+    .form-inp, .form-sel, .form-ta { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.15s; }
+    .form-inp:focus, .form-sel:focus, .form-ta:focus { border-color: var(--accent); }
+    .form-ta { resize: vertical; min-height: 80px; line-height: 1.4; }
+    .btn { padding: 11px 18px; border-radius: 10px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
+    .btn:disabled { opacity: 0.5; cursor: default; }
+    .btn-primary { background: var(--accent); color: white; }
+    .btn-danger { background: var(--danger); color: white; }
+    .btn-ghost { background: var(--surface2); color: var(--text); }
+    .btn-row { display: flex; gap: 8px; margin-top: 8px; }
+    .btn-row .btn { flex: 1; }
+
+    /* Category settings */
+    .cat-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: var(--surface); border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--border); }
+    .cat-row-top { display: flex; gap: 8px; align-items: center; }
+    .cat-color-preview { width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; border: 2px solid rgba(0,0,0,0.1); }
+    .cat-name-inp { flex: 1; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 14px; font-weight: 600; font-family: inherit; outline: none; }
+    .cat-name-inp:focus { border-color: var(--accent); }
+    .cat-delete-btn { width: 28px; height: 28px; border-radius: 8px; border: none; background: none; color: var(--text2); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .cat-delete-btn:hover { background: #fee2e2; color: var(--danger); }
+    .color-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+    .color-swatch { width: 24px; height: 24px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; transition: transform 0.1s; flex-shrink: 0; }
+    .color-swatch:hover { transform: scale(1.15); }
+    .color-swatch.selected { border-color: var(--text); transform: scale(1.1); }
+    .add-cat-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border-radius: 10px; border: 1.5px dashed var(--border); background: none; color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer; width: 100%; margin-bottom: 14px; }
+    .add-cat-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* Threads */
+    .threads-list { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+    .thread-card { background: var(--surface); border-radius: 12px; padding: 13px 14px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.1s; }
+    .thread-card:active { transform: scale(0.98); }
+    .thread-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 5px; }
+    .thread-card-title { font-size: 14px; font-weight: 600; line-height: 1.3; }
+    .thread-card-meta { font-size: 12px; color: var(--text2); margin-bottom: 5px; }
+    .thread-update-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: var(--surface2); color: var(--text2); }
+    .thread-view-wrap { padding: 0 14px 16px; }
+    .thread-view-hdr { padding: 12px 0; border-bottom: 1px solid var(--border); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; }
+    .back-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--surface); color: var(--text); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .thread-view-info { flex: 1; }
+    .thread-view-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
+    .thread-view-sub { font-size: 12px; color: var(--text2); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+    .updates-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+    .update-entry { background: var(--surface); border-radius: 10px; padding: 10px 12px; border-left: 3px solid var(--accent); }
+    .update-entry.eod-source { border-left-color: var(--eod-color); }
+    .update-entry.update-source { border-left-color: #10b981; }
+    .update-banner { background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; padding: 7px 12px; margin-bottom: 8px; font-size: 12px; color: #10b981; font-weight: 600; text-align: center; }
+    .update-tag { background: rgba(16,185,129,0.15); color: #10b981; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
+
+    /* Thread overview summary */
+    .thread-summary-block { background: var(--surface); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; border: 1px solid var(--border); }
+    .thread-summary-hdr { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 7px; display: flex; align-items: center; justify-content: space-between; }
+    .thread-summary-text { font-size: 13px; line-height: 1.55; }
+    .thread-summary-empty { font-size: 12px; color: var(--text2); font-style: italic; }
+    .refresh-btn { padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 11px; font-weight: 500; cursor: pointer; transition: color 0.15s; }
+    .refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
+    .refresh-btn:disabled { opacity: 0.5; cursor: default; }
+
+    /* Decision Block */
+    .decision-block { background: #f5f0ff; border: 1px solid #8b5cf6; border-radius: 12px; padding: 13px 14px; margin-bottom: 14px; }
+    html.dark .decision-block { background: #1e0f3d; border-color: #7c3aed; }
+    .decision-block-hdr { font-size: 12px; font-weight: 700; color: #8b5cf6; margin-bottom: 9px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+    .decision-question { font-size: 14px; font-weight: 600; line-height: 1.4; margin-bottom: 6px; }
+    .decision-options { font-size: 13px; color: var(--text2); line-height: 1.55; white-space: pre-wrap; }
+    .decision-empty { font-size: 12px; color: var(--text2); font-style: italic; }
+    .decision-suggest-btn { padding: 5px 11px; border-radius: 8px; border: 1px solid #8b5cf6; background: none; color: #8b5cf6; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background 0.15s; }
+    .decision-suggest-btn:hover { background: rgba(139,92,246,0.08); }
+    .decision-suggest-btn:disabled { opacity: 0.5; cursor: default; }
+    .decision-draft-area { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #8b5cf6; background: var(--bg); color: var(--text); font-size: 13px; resize: vertical; min-height: 72px; font-family: inherit; outline: none; margin-top: 8px; line-height: 1.4; }
+    .decision-draft-btns { display: flex; gap: 8px; margin-top: 8px; }
+    .decision-draft-save { padding: 6px 14px; border-radius: 8px; border: none; background: #8b5cf6; color: white; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .decision-draft-cancel { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 13px; cursor: pointer; }
+    .update-text { font-size: 14px; line-height: 1.4; }
+    .update-meta { font-size: 11px; color: var(--text2); margin-top: 4px; }
+    .update-eod-tag { background: var(--eod-bg); color: var(--eod-color); font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
+    .thread-input-row { display: flex; gap: 8px; align-items: flex-end; }
+    .thread-textarea { flex: 1; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; resize: none; min-height: 42px; max-height: 100px; font-family: inherit; outline: none; }
+    .thread-textarea:focus { border-color: var(--accent); }
+    .thread-empty { text-align: center; color: var(--text2); font-size: 13px; padding: 30px 16px; }
+
+    /* Notifications */
+    .notifs-wrap { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+    .notif-card { background: var(--surface); border-radius: 12px; padding: 14px; border: 1px solid var(--border); transition: opacity 0.3s; }
+    .notif-card.is-read { opacity: 0.45; }
+    .notif-time { font-size: 12px; color: var(--text2); margin-bottom: 9px; font-weight: 500; }
+    .notif-body { font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
+    .notif-actions { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
+    .notif-action-btn { padding: 6px 13px; border-radius: 8px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; }
+    .notif-action-btn.copy-btn { background: var(--accent); color: white; border-color: var(--accent); }
+    .notif-action-btn.copied { background: #10b981; border-color: #10b981; color: white; }
+    .clear-all-btn { display: block; width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: none; color: var(--danger); font-size: 14px; font-weight: 600; cursor: pointer; }
+
+    /* Settings */
+    .settings-wrap { padding: 16px 14px; }
+    .settings-section { margin-bottom: 24px; }
+    .settings-section-label { font-size: 11px; font-weight: 700; color: var(--text2); letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 8px; padding-left: 2px; }
+    .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--surface); border-radius: 10px; margin-bottom: 6px; }
+    .settings-row-lbl { font-size: 14px; }
+    .settings-row-val { font-size: 13px; color: var(--text2); }
+    .toggle-btn { width: 44px; height: 26px; border-radius: 13px; position: relative; cursor: pointer; border: none; transition: background 0.2s; flex-shrink: 0; }
+    .toggle-btn.on { background: var(--accent); }
+    .toggle-btn.off { background: var(--surface2); }
+    .toggle-btn::after { content: ''; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: white; top: 3px; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+    .toggle-btn.on::after { left: 21px; }
+    .toggle-btn.off::after { left: 3px; }
+    .settings-select { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 13px; font-family: inherit; outline: none; width: 100%; }
+    .api-key-row { display: flex; gap: 8px; align-items: center; }
+    .api-key-inp { flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 13px; font-family: monospace; outline: none; }
+    .api-key-inp:focus { border-color: var(--accent); }
+    .api-key-save { padding: 9px 14px; border-radius: 10px; border: none; background: var(--accent); color: white; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+
+    /* Misc */
+    .fmt b, .fmt strong { font-weight: 700; }
+    .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.75s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .mic-btn { width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--surface2); color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.2s; }
+    .mic-btn.listening { background: var(--danger); color: white; animation: pulse 1s ease-in-out infinite; }
+    @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.12); opacity: 0.85; } }
+    .empty-state { text-align: center; color: var(--text2); font-size: 13px; padding: 30px 16px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+  const { useState, useEffect, useRef, useCallback } = React;
+
+  const DEFAULT_MODEL = 'claude-sonnet-4-5';
+
+  const COLOR_PALETTE = [
+    '#f59e0b','#ef4444','#3b82f6','#8b5cf6',
+    '#10b981','#f97316','#ec4899','#6b7280',
+    '#14b8a6','#a855f7','#06b6d4','#84cc16'
+  ];
+
+  const DEFAULT_CATEGORIES = [
+    { id: 'todo',     label: 'To Do',    color: '#f59e0b' },
+    { id: 'decision', label: 'Decision', color: '#8b5cf6' },
+    { id: 'done',     label: 'Done',     color: '#10b981' }
+  ];
+
+  const STATUS_OPTIONS = [
+    { value: 'open',        label: 'Open' },
+    { value: 'in-progress', label: 'In Progress' },
+    { value: 'decision',    label: 'Decision' },
+    { value: 'done',        label: 'Done' }
+  ];
+
+  // ─── Helpers ─────────────────────────────────────────────────────────────────
+  const uid  = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const now  = () => new Date().toISOString();
+
+  const fmtDate = (d) => {
+    if (!d) return '';
+    const date  = new Date(d + 'T00:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    const diff  = Math.floor((date - today) / 86400000);
+    if (diff === 0) return 'Today';
+    if (diff === 1) return 'Tomorrow';
+    if (diff === -1) return 'Yesterday';
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  const isOverdue = (d, status) => {
+    if (!d || status === 'done') return false;
+    const date  = new Date(d + 'T00:00:00');
+    const today = new Date(); today.setHours(0,0,0,0);
+    return date < today;
+  };
+
+  const fmtTime = (iso) => {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  };
+
+  const ls = {
+    get: (k, def) => { try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : def; } catch { return def; } },
+    set: (k, v)   => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
+  };
+
+  const fmtHtml = (text) =>
+    (text || '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
+
+  const stripMd = (text) =>
+    (text || '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1');
+
+  const parseNumbered = (text) => {
+    const results = {}; const lines = text.split('\n');
+    let curNum = null; let curParts = [];
+    for (const line of lines) {
+      const m = line.match(/^(\d+)[.)]\s+(.+)/);
+      if (m) { if (curNum !== null) results[curNum] = curParts.join(' ').trim(); curNum = parseInt(m[1]); curParts = [m[2]]; }
+      else if (curNum !== null && line.trim()) curParts.push(line.trim());
+    }
+    if (curNum !== null) results[curNum] = curParts.join(' ').trim();
+    return results;
+  };
+
+  const copyText = async (text) => {
+    try { await navigator.clipboard.writeText(text); }
+    catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
+  };
+
+  // ─── Category Settings Modal ─────────────────────────────────────────────────
+  function CategorySettingsModal({ categories, onSave, onClose }) {
+    const [draft, setDraft] = useState(categories.map(c => ({ ...c })));
+
+    const update = (id, field, val) => setDraft(prev => prev.map(c => c.id === id ? { ...c, [field]: val } : c));
+    const addCat = () => setDraft(prev => [...prev, { id: uid(), label: 'New Category', color: '#6b7280' }]);
+    const delCat = (id) => { if (draft.length <= 1) return; setDraft(prev => prev.filter(c => c.id !== id)); };
+
+    return (
+      <div className="overlay" onClick={e => { if (e.target.classList.contains('overlay')) onClose(); }}>
+        <div className="modal">
+          <div className="modal-handle"/>
+          <div className="modal-hdr">
+            <span className="modal-hdr-title">⚙️ Board Categories</span>
+            <button className="icon-btn" onClick={onClose}>×</button>
+          </div>
+          {draft.map(cat => (
+            <div key={cat.id} className="cat-row">
+              <div className="cat-row-top">
+                <div className="cat-color-preview" style={{ background: cat.color }}/>
+                <input className="cat-name-inp" value={cat.label} onChange={e => update(cat.id, 'label', e.target.value)} placeholder="Category name"/>
+                <button className="cat-delete-btn" onClick={() => delCat(cat.id)} title="Delete category">×</button>
+              </div>
+              <div className="color-swatches">
+                {COLOR_PALETTE.map(color => (
+                  <button key={color} className={`color-swatch ${cat.color === color ? 'selected' : ''}`}
+                    style={{ background: color }} onClick={() => update(cat.id, 'color', color)}/>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button className="add-cat-btn" onClick={addCat}>+ Add Category</button>
+          <div className="btn-row">
+            <button className="btn btn-primary" onClick={() => onSave(draft)}>Save Changes</button>
+            <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Task Modal ───────────────────────────────────────────────────────────────
+  function TaskModal({ task, categories, onSave, onDelete, onClose }) {
+    const isNew = !task._exists;
+    const [form, setForm] = useState({ ...task });
+    const set = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }));
+
+    return (
+      <div className="overlay" onClick={e => { if (e.target.classList.contains('overlay')) onClose(); }}>
+        <div className="modal">
+          <div className="modal-handle"/>
+          <div className="modal-hdr">
+            <span className="modal-hdr-title">{isNew ? 'New Task' : 'Edit Task'}</span>
+            <button className="icon-btn" onClick={onClose}>×</button>
+          </div>
+          <div className="form-group">
+            <label className="form-lbl">Task Title</label>
+            <input className="form-inp" value={form.title || ''} onChange={set('title')} placeholder="What needs to be done?" autoFocus={isNew}/>
+          </div>
+          <div className="form-group">
+            <label className="form-lbl">Column</label>
+            <select className="form-sel" value={form.category || categories[0]?.id || 'todo'} onChange={set('category')}>
+              {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-lbl">Due Date *</label>
+            <input type="date" className="form-inp" value={form.dueDate || ''} onChange={set('dueDate')}/>
+          </div>
+          <div className="form-group">
+            <label className="form-lbl">Status</label>
+            <select className="form-sel" value={form.status || 'open'} onChange={set('status')}>
+              {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label className="form-lbl">Notes</label>
+            <textarea className="form-ta" value={form.notes || ''} onChange={set('notes')} placeholder="Additional context..."/>
+          </div>
+          <div className="form-group">
+            <label className="form-lbl">Decision Question</label>
+            <input className="form-inp" value={form.decisionQuestion || ''} onChange={set('decisionQuestion')} placeholder="What needs to be decided?"/>
+          </div>
+          <div className="form-group">
+            <label className="form-lbl">Decision Options</label>
+            <textarea className="form-ta" value={form.decisionOptions || ''} onChange={set('decisionOptions')} placeholder="What are the options? (or use ✨ AI Suggest in Threads)"/>
+          </div>
+          <div className="btn-row">
+            <button className="btn btn-primary" onClick={() => onSave(form)} disabled={!form.title?.trim()}>
+              {isNew ? 'Add Task' : 'Save Changes'}
+            </button>
+            {!isNew && (
+              <button className="btn btn-danger" onClick={() => { if (confirm('Delete this task and its thread?')) onDelete(form.id); }}>
+                Delete
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ─── Main App ─────────────────────────────────────────────────────────────────
+  function App() {
+    const [tab,           setTab]           = useState('chat');
+    const [darkMode,      setDarkMode]      = useState(() => ls.get('ol-dk', false));
+    const [model,         setModel]         = useState(() => ls.get('ol-mdl', DEFAULT_MODEL));
+    const [apiKey,        setApiKey]        = useState(() => ls.get('ol-key', ''));
+    const [apiKeyDraft,   setApiKeyDraft]   = useState(() => ls.get('ol-key', ''));
+    const [categories,    setCategories]    = useState(() => ls.get('ol-cats', DEFAULT_CATEGORIES));
+    const [tasks,         setTasks]         = useState(() => ls.get('ol-tasks', {}));
+    const [threads,       setThreads]       = useState(() => ls.get('ol-threads', {}));
+    const [chatHistory,   setChatHistory]   = useState(() => ls.get('ol-ch', []));
+    const [notifications, setNotifications] = useState(() => ls.get('ol-notifs', []));
+    const [tokens,        setTokens]        = useState(() => ls.get('ol-tok', { input: 0, output: 0 }));
+    const [eodState,      setEodState]      = useState(() => ls.get('ol-eod', null));
+    const [updateTaskState, setUpdateTaskState] = useState(() => ls.get('ol-upd', null));
+
+    const [chatInput,      setChatInput]      = useState('');
+    const [aiLoading,      setAiLoading]      = useState(false);
+    const [editTask,       setEditTask]       = useState(null);
+    const [showCatSettings,setShowCatSettings]= useState(false);
+    const [activeThread,   setActiveThread]   = useState(null);
+    const [threadInput,    setThreadInput]    = useState('');
+    const [collapsedCols,  setCollapsedCols]  = useState({});
+    const [copiedId,       setCopiedId]       = useState(null);
+    const [isListening,    setIsListening]    = useState(false);
+    const [decisionDraft,  setDecisionDraft]  = useState(null);
+    const [decisionDraftLoading, setDecisionDraftLoading] = useState(false);
+    const [summarizing,    setSummarizing]    = useState(false);
+    const [speechSupported, setSpeechSupported] = useState(false);
+    const recognitionRef = useRef(null);
+
+    const chatEndRef = useRef(null);
+
+    // Persist
+    useEffect(() => ls.set('ol-cats',    categories),    [categories]);
+    useEffect(() => ls.set('ol-tasks',   tasks),         [tasks]);
+    useEffect(() => ls.set('ol-threads', threads),       [threads]);
+    useEffect(() => ls.set('ol-ch',      chatHistory),   [chatHistory]);
+    useEffect(() => ls.set('ol-notifs',  notifications), [notifications]);
+    useEffect(() => ls.set('ol-tok',     tokens),        [tokens]);
+    useEffect(() => ls.set('ol-eod',     eodState),      [eodState]);
+    useEffect(() => ls.set('ol-upd',     updateTaskState), [updateTaskState]);
+    useEffect(() => ls.set('ol-mdl',     model),         [model]);
+    useEffect(() => { ls.set('ol-dk', darkMode); document.documentElement.classList.toggle('dark', darkMode); }, [darkMode]);
+    useEffect(() => { document.documentElement.classList.toggle('dark', ls.get('ol-dk', false)); }, []);
+    useEffect(() => {
+      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SR) return;
+      const rec = new SR();
+      rec.continuous = false;
+      rec.interimResults = true;
+      rec.lang = 'en-US';
+      rec.onresult = (e) => {
+        const transcript = Array.from(e.results).map(r => r[0].transcript).join('');
+        setChatInput(transcript);
+      };
+      rec.onend = () => setIsListening(false);
+      rec.onerror = () => setIsListening(false);
+      recognitionRef.current = rec;
+      setSpeechSupported(true);
+    }, []);
+
+    const toggleVoice = () => {
+      const rec = recognitionRef.current;
+      if (!rec) return;
+      if (isListening) { rec.stop(); setIsListening(false); }
+      else { setChatInput(''); rec.start(); setIsListening(true); }
+    };
+    useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatHistory, aiLoading]);
+    useEffect(() => { setDecisionDraft(null); setDecisionDraftLoading(false); setSummarizing(false); }, [activeThread]);
+
+    const unreadCount = notifications.filter(n => !n.read).length;
+
+    // ── AI helpers
+    const getCatLabel = (id) => categories.find(c => c.id === id)?.label || id;
+
+    const getBoardState = useCallback(() => {
+      const list = Object.values(tasks);
+      if (!list.length) return 'Board is empty.';
+      const byCat = {};
+      categories.forEach(c => { byCat[c.id] = []; });
+      list.forEach(t => { if (byCat[t.category] !== undefined) byCat[t.category].push(t); else (byCat['_other'] = byCat['_other']||[]).push(t); });
+      return categories.map(c => {
+        const catTasks = byCat[c.id] || [];
+        const lines = catTasks.length ? catTasks.map(t => `  [${t.id}] "${t.title}" | Due: ${t.dueDate||'NONE'} | Status: ${t.status}`).join('\n') : '  (empty)';
+        return `${c.label.toUpperCase()}:\n${lines}`;
+      }).join('\n\n');
+    }, [tasks, categories]);
+
+    const getThreadLog = (taskId) => {
+      const thread = threads[taskId];
+      if (!thread?.messages?.length) return 'No updates logged yet.';
+      return thread.messages.slice(-5).map(m => `[${fmtTime(m.timestamp)}] ${m.content}`).join('\n');
+    };
+
+    const catIds = categories.map(c => `"${c.id}"`).join('|');
+
+    const systemPrompt = useCallback(() =>
+      `You are OpsLog AI, a professional operations assistant for Symon, an Operations Manager reporting to his boss Tarek.
+
+Your job: help Symon track tasks, log updates, and generate concise executive summaries for Tarek.
+
+## Current Board State
+${getBoardState()}
+
+## Available Categories (columns)
+${categories.map(c => `- ${c.id}: ${c.label}`).join('\n')}
+
+## Task Status Options
+open | in-progress | decision | done
+
+## Rules
+1. Every task MUST have a due date. If missing, ask for it before adding.
+2. Be concise and professional.
+3. When adding a task, include a brief AI summary note.
+4. END every reply with exactly ONE ACTION block.
+5. If a task clearly involves a decision (by status or content), populate decisionQuestion and optionally decisionOptions in the payload.
+
+## ACTION Format
+ACTION:{"type":"TYPE","payload":{...}}
+
+## ACTION Types
+- ADD:    payload = { title, category (one of: ${catIds}), dueDate ("YYYY-MM-DD"), notes, status ("open"|"in-progress"|"decision"|"done"), decisionQuestion? (what needs to be decided), decisionOptions? (numbered options if obvious) }
+- EDIT:   payload = { id, changes: { title?, category?, dueDate?, notes?, status?, decisionQuestion?, decisionOptions? } }
+- DELETE: payload = { id }
+- NONE:   payload = {}`, [getBoardState, categories]);
+
+    const callAI = async (messages, sysOverride) => {
+      if (!apiKey) throw new Error('No API key — go to Settings to add your Anthropic API key.');
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model, system: sysOverride || systemPrompt(), messages, max_tokens: 1024 })
+      });
+      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err?.error?.message || `API error ${res.status}`); }
+      const data = await res.json();
+      setTokens(prev => ({ input: prev.input + (data.usage?.input_tokens||0), output: prev.output + (data.usage?.output_tokens||0) }));
+      return data.content?.[0]?.text || '';
+    };
+
+    const applyAction = (aiText, nextTasks, nextThreads) => {
+      const match = aiText.match(/ACTION:(\{[\s\S]*?\})(?:\s*$)/m);
+      if (!match) return;
+      try {
+        const { type, payload } = JSON.parse(match[1]);
+        if (type === 'ADD') {
+          const id = uid();
+          nextTasks[id] = { id, title: payload.title, category: payload.category || categories[0]?.id || 'todo', dueDate: payload.dueDate, notes: payload.notes||'', status: payload.status||'open', decisionQuestion: payload.decisionQuestion||'', decisionOptions: payload.decisionOptions||'', createdAt: now(), updatedAt: now() };
+          if (!nextThreads[id]) nextThreads[id] = { messages: [] };
+        } else if (type === 'EDIT') {
+          if (nextTasks[payload.id]) nextTasks[payload.id] = { ...nextTasks[payload.id], ...payload.changes, updatedAt: now() };
+        } else if (type === 'DELETE') {
+          delete nextTasks[payload.id]; delete nextThreads[payload.id];
+        } else if (type === 'THREAD_UPDATE') {
+          const { taskId, content } = payload;
+          if (taskId) {
+            if (!nextThreads[taskId]) nextThreads[taskId] = { messages: [] };
+            nextThreads[taskId].messages.push({ id: uid(), content, timestamp: now(), source: 'update' });
+          }
+        }
+      } catch (e) { console.warn('Action parse:', e); }
+    };
+
+    // ── Send chat
+    const sendChat = async (text) => {
+      if (!text.trim() || aiLoading) return;
+      setChatInput('');
+      setChatHistory(prev => [...prev, { role: 'user', content: text, _show: text }]);
+      setAiLoading(true);
+      try {
+        if (text.toLowerCase().startsWith('update task')) { await handleUpdateTaskFlow(text); return; }
+        if (updateTaskState?.step === 'picking') { await handleUpdatePick(text); return; }
+        if (eodState?.step === 'asked') { await handleEodResponse(text); return; }
+        const history = chatHistory.filter(m => m.role && m.content).map(m => ({ role: m.role, content: m.content }));
+        history.push({ role: 'user', content: text });
+        const aiText  = await callAI(history);
+        const display = aiText.replace(/ACTION:\{[\s\S]*?\}(?:\s*$)/m, '').trim();
+        const nextTasks = { ...tasks }; const nextThreads = { ...threads };
+        applyAction(aiText, nextTasks, nextThreads);
+        setTasks(nextTasks); setThreads(nextThreads);
+        setChatHistory(prev => [...prev, { role: 'assistant', content: aiText, _show: display }]);
+      } catch (e) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
+      } finally { setAiLoading(false); }
+    };
+
+    // ── EOD
+    const startEod = async () => {
+      if (aiLoading) return;
+      const openTasks = Object.values(tasks).filter(t => t.status !== 'done');
+      if (!openTasks.length) { setChatHistory(prev => [...prev, { role: 'assistant', content: 'No open tasks.', _show: 'No open tasks to review right now.' }]); return; }
+      setChatHistory(prev => [...prev, { role: 'user', content: 'Generate EOD', _show: '📊 Generate EOD' }]);
+      setAiLoading(true);
+      try {
+        const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        const taskLines = openTasks.map((t, i) =>
+          `${i+1}. **${t.title}** (Due: ${fmtDate(t.dueDate)||'No date'} · Status: ${t.status} · Column: ${getCatLabel(t.category)})${t.decisionQuestion ? `\n   Decision Question: ${t.decisionQuestion}` : ''}${t.decisionOptions ? `\n   Options: ${t.decisionOptions}` : ''}\n   Thread log: ${getThreadLog(t.id)}`
+        ).join('\n\n');
+        const aiText = await callAI(
+          [{ role: 'user', content: `Today is ${today}. Ask Symon for a brief status update on each open task. Number each question. Tell him to reply with numbered answers.\n\nOpen tasks:\n${taskLines}` }],
+          `You are OpsLog AI conducting an EOD check-in. Ask concise numbered questions about each task's status. Be professional and brief.`
+        );
+        setEodState({ tasks: openTasks, step: 'asked' });
+        setChatHistory(prev => [...prev, { role: 'assistant', content: aiText, _show: aiText }]);
+      } catch (e) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
+      } finally { setAiLoading(false); }
+    };
+
+    const handleEodResponse = async (responseText) => {
+      try {
+        const numbered = parseNumbered(responseText); const eodTasks = eodState.tasks;
+        const nextThreads = { ...threads }; const savedUpdates = [];
+        Object.entries(numbered).forEach(([numStr, updateText]) => {
+          const idx = parseInt(numStr) - 1;
+          if (idx >= 0 && idx < eodTasks.length) {
+            const task = eodTasks[idx];
+            if (!nextThreads[task.id]) nextThreads[task.id] = { messages: [] };
+            nextThreads[task.id].messages.push({ id: uid(), content: updateText, timestamp: now(), source: 'eod' });
+            savedUpdates.push({ task, update: updateText });
+          }
+        });
+        setThreads(nextThreads); setEodState(null);
+        const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        const updateLines = savedUpdates.length
+          ? savedUpdates.map(({ task, update }) => {
+              let line = `• ${task.title} (Due: ${fmtDate(task.dueDate)}) — ${update}`;
+              if (task.decisionQuestion) line += `\n  Decision Question: ${task.decisionQuestion}`;
+              if (task.decisionOptions)  line += `\n  Options: ${task.decisionOptions}`;
+              return line;
+            }).join('\n')
+          : 'No updates provided.';
+        const summary = await callAI(
+          [{ role: 'user', content: `Generate an ultra-concise EOD summary for Tarek (CEO-level).\n\nDate: ${today}\nUpdates:\n${updateLines}\n\nRules:\n- For EACH task, write exactly ONE bullet: a one-line summary of what happened/status.\n- Add a SECOND bullet for that task ONLY if Tarek's decision or approval is needed — start it with "→ Decision needed: [question]".\n- If decision options are provided, add them on the line after as "   Options: [options]".\n- No greetings, no closing lines, no fluff.\n- Start with "EOD Update — ${today}" as a plain header (no bold markers).` }],
+          `You are OpsLog AI. Write an ultra-brief EOD for a CEO. One bullet per task (status summary). For decision tasks, always include the decision question and options. No extra words.`
+        );
+        setNotifications(prev => [{ id: uid(), content: summary, timestamp: now(), read: false }, ...prev]);
+        setChatHistory(prev => [...prev, { role: 'assistant', content: summary, _show: `✅ Updates saved to threads. EOD summary added to Notifications.\n\n${summary}` }]);
+      } catch (e) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
+      }
+    };
+
+    // ── Smart Update Task
+    const handleUpdateTaskFlow = async (text) => {
+      const updateText = text.replace(/^update task[:\s]*/i, '').trim();
+      if (!updateText) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: 'No update text.', _show: 'What should I update? Type it after "Update task: " and send again.' }]);
+        setAiLoading(false);
+        return;
+      }
+      const allTasks = Object.values(tasks);
+      if (!allTasks.length) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: 'No tasks.', _show: 'No tasks on the board yet.' }]);
+        setAiLoading(false);
+        return;
+      }
+      try {
+        const taskLines = allTasks.map((t, i) =>
+          `${i+1}. [${t.id}] "${t.title}" | Due: ${t.dueDate||'NONE'} | Status: ${t.status}\n   Thread: ${getThreadLog(t.id)}`
+        ).join('\n\n');
+        const aiText = await callAI(
+          [{ role: 'user', content: `Update message: "${updateText}"\n\nTasks and their threads:\n${taskLines}` }],
+          `You are OpsLog AI. Identify which task thread an update message belongs to.
+
+If ONE task clearly matches:
+- Reply: "Logging to **[task title]** ✓"
+- Write a 2–3 sentence summary of the current thread status including this new update
+- End with: ACTION:{"type":"THREAD_UPDATE","payload":{"taskId":"<id>"}}
+
+If TWO OR MORE tasks could match:
+- Reply: "This could apply to a few tasks — which thread should I log this to?"
+- List numbered options: "1. [title] — [one-line reason]"
+- End with: ACTION:{"type":"CHOICES","payload":{"taskIds":["<id1>","<id2>"]}}
+
+If NO task matches:
+- Explain that and ask for clarification
+- End with: ACTION:{"type":"NONE","payload":{}}`
+        );
+        const display = aiText.replace(/ACTION:\{[\s\S]*?\}(?:\s*$)/m, '').trim();
+        const actionMatch = aiText.match(/ACTION:(\{[\s\S]*?\})(?:\s*$)/m);
+        let actionType = 'NONE', actionPayload = {};
+        if (actionMatch) {
+          try { const p = JSON.parse(actionMatch[1]); actionType = p.type; actionPayload = p.payload; } catch {}
+        }
+        if (actionType === 'THREAD_UPDATE') {
+          const { taskId } = actionPayload;
+          const nextThreads = { ...threads };
+          if (!nextThreads[taskId]) nextThreads[taskId] = { messages: [] };
+          nextThreads[taskId].messages.push({ id: uid(), content: updateText, timestamp: now(), source: 'update' });
+          // Extract summary portion of the AI reply (everything after "Logging to **X** ✓") and cache it
+          const summaryText = display.replace(/^Logging to \*\*.*?\*\*\s*✓/i, '').trim();
+          if (summaryText) nextThreads[taskId].summary = summaryText;
+          setThreads(nextThreads);
+          setChatHistory(prev => [...prev, { role: 'assistant', content: aiText, _show: display }]);
+        } else if (actionType === 'CHOICES') {
+          const matchIds = actionPayload.taskIds || [];
+          const matchTasks = matchIds.map(id => tasks[id]).filter(Boolean);
+          setUpdateTaskState({ matches: matchTasks.length >= 2 ? matchTasks : allTasks, updateText, step: 'picking' });
+          setChatHistory(prev => [...prev, { role: 'assistant', content: aiText, _show: display }]);
+        } else {
+          setChatHistory(prev => [...prev, { role: 'assistant', content: aiText, _show: display }]);
+        }
+      } catch (e) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
+      }
+    };
+
+    const handleUpdatePick = async (text) => {
+      try {
+        const num = parseInt(text.trim());
+        const { matches, updateText } = updateTaskState;
+        if (isNaN(num) || num < 1 || num > matches.length) {
+          setChatHistory(prev => [...prev, { role: 'assistant', content: 'Invalid choice.', _show: `Please reply with a number between 1 and ${matches.length}.` }]);
+          setAiLoading(false);
+          return;
+        }
+        const selectedTask = matches[num - 1];
+        const nextThreads = { ...threads };
+        if (!nextThreads[selectedTask.id]) nextThreads[selectedTask.id] = { messages: [] };
+        nextThreads[selectedTask.id].messages.push({ id: uid(), content: updateText, timestamp: now(), source: 'update' });
+        setThreads(nextThreads);
+        setUpdateTaskState(null);
+        const threadLog = nextThreads[selectedTask.id].messages
+          .map(m => `[${fmtTime(m.timestamp)}] ${m.content}`).join('\n');
+        const summary = await callAI(
+          [{ role: 'user', content: `Task: "${selectedTask.title}" (Due: ${fmtDate(selectedTask.dueDate)||'No date'})\nNew update just logged: "${updateText}"\n\nFull thread:\n${threadLog}\n\nSummarise the current status of this task in 2–3 sentences. Plain text, no bullets.` }],
+          `You are OpsLog AI. Write a brief thread summary after a new update was logged. 2–3 sentences max, plain text.`
+        );
+        // Cache the summary on the thread so the Overview reflects it immediately
+        setThreads(prev => ({ ...prev, [selectedTask.id]: { ...prev[selectedTask.id], summary } }));
+        setChatHistory(prev => [...prev, { role: 'assistant', content: summary, _show: `✅ Logged to **${selectedTask.title}**.\n\n${summary}` }]);
+      } catch (e) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
+      }
+    };
+
+    // ── Thread Overview Summary
+    const refreshThreadSummary = async (taskId, latestThreads) => {
+      const thread = latestThreads[taskId];
+      if (!thread?.messages?.length || summarizing) return;
+      setSummarizing(true);
+      try {
+        const t = tasks[taskId];
+        const log = thread.messages.slice(-10).map(m => `[${fmtTime(m.timestamp)}] ${m.content}`).join('\n');
+        const summaryText = await callAI(
+          [{ role: 'user', content: `Task: "${t?.title}" (Due: ${fmtDate(t?.dueDate)||'No date'} · Status: ${t?.status})\n\nThread updates:\n${log}\n\nWrite a 2–3 sentence summary of the current status and what's next. Plain text only.` }],
+          `You are OpsLog AI. Summarise a task thread in 2–3 plain sentences. Focus on current status and next steps. No bullets, no headers.`
+        );
+        setThreads(prev => ({ ...prev, [taskId]: { ...prev[taskId], summary: summaryText } }));
+      } catch (e) { console.warn('Summary refresh failed:', e); }
+      finally { setSummarizing(false); }
+    };
+
+    // ── Decision AI Suggest
+    const suggestDecisionOptions = async (task) => {
+      setDecisionDraftLoading(true);
+      setDecisionDraft(null);
+      try {
+        const aiText = await callAI(
+          [{ role: 'user', content: `Task: "${task.title}"\nStatus: ${task.status}\nNotes: ${task.notes||'None'}\nDecision Question: ${task.decisionQuestion||'Not specified'}\nRecent thread:\n${getThreadLog(task.id)}` }],
+          `You are OpsLog AI. Suggest 2–3 clear, practical decision options for this task. Format as a numbered list. One line per option. No preamble — start directly with "1.".`
+        );
+        const clean = aiText.replace(/ACTION:\{[\s\S]*?\}(?:\s*$)/m, '').trim();
+        setDecisionDraft(clean);
+      } catch (e) {
+        setDecisionDraft(`Error: ${e.message}`);
+      } finally {
+        setDecisionDraftLoading(false);
+      }
+    };
+
+    const saveDecisionDraft = () => {
+      if (decisionDraft === null || !activeThread) return;
+      const nextTasks = { ...tasks, [activeThread]: { ...tasks[activeThread], decisionOptions: decisionDraft, updatedAt: now() } };
+      setTasks(nextTasks);
+      setDecisionDraft(null);
+    };
+
+    // ── Task CRUD
+    const saveTask = (form) => {
+      const nextTasks   = { ...tasks, [form.id]: { ...form, updatedAt: now(), createdAt: form.createdAt||now() } };
+      const nextThreads = { ...threads };
+      if (!nextThreads[form.id]) nextThreads[form.id] = { messages: [] };
+      setTasks(nextTasks); setThreads(nextThreads); setEditTask(null);
+    };
+
+    const deleteTask = (id) => {
+      const nextTasks = { ...tasks }; delete nextTasks[id];
+      const nextThreads = { ...threads }; delete nextThreads[id];
+      setTasks(nextTasks); setThreads(nextThreads); setEditTask(null);
+    };
+
+    const newTaskTemplate = () => ({ id: uid(), title: '', category: categories[0]?.id||'todo', dueDate: '', notes: '', status: 'open', _exists: false });
+
+    // ── Thread updates
+    const addUpdate = (taskId, content) => {
+      if (!content.trim()) return;
+      const nextThreads = { ...threads };
+      if (!nextThreads[taskId]) nextThreads[taskId] = { messages: [] };
+      nextThreads[taskId].messages.push({ id: uid(), content, timestamp: now(), source: 'user' });
+      setThreads(nextThreads); setThreadInput('');
+      refreshThreadSummary(taskId, nextThreads); // background — no await
+    };
+
+    // ── Category settings
+    const saveCategories = (newCats) => {
+      const nextTasks = { ...tasks };
+      const validIds  = newCats.map(c => c.id);
+      const fallbackId = newCats[0]?.id;
+      Object.keys(nextTasks).forEach(id => {
+        if (!validIds.includes(nextTasks[id].category)) nextTasks[id] = { ...nextTasks[id], category: fallbackId };
+      });
+      setCategories(newCats); setTasks(nextTasks); setShowCatSettings(false);
+    };
+
+    const handleCopy = async (id, content) => {
+      await copyText(stripMd(content)); setCopiedId(id); setTimeout(() => setCopiedId(null), 2000);
+    };
+
+    const saveApiKey = () => { const t = apiKeyDraft.trim(); ls.set('ol-key', t); setApiKey(t); };
+
+    // ─────────────────────────────────────────────────────────────────────────────
+    // RENDER TABS
+    // ─────────────────────────────────────────────────────────────────────────────
+
+    const renderChat = () => (
+      <div className="chat-wrap">
+        {!apiKey && (
+          <div className="no-key-banner">
+            <strong>⚠️ API key not set.</strong> Go to <strong>Settings</strong> and paste your Anthropic API key to enable AI.
+          </div>
+        )}
+        <div className="chat-messages">
+          {chatHistory.length === 0 && <div className="chat-msg sys">Ready. Use the pills below or type anything.</div>}
+          {chatHistory.map((m, i) => (
+            <div key={i} className={`chat-msg ${m.role === 'user' ? 'user' : 'ai'}`}>
+              <span className="fmt" dangerouslySetInnerHTML={{ __html: fmtHtml(m._show || m.content) }}/>
+            </div>
+          ))}
+          {aiLoading && <div className="chat-msg ai"><div className="typing-dots"><span/><span/><span/></div></div>}
+          <div ref={chatEndRef}/>
+        </div>
+        <div className="chat-input-area">
+          {eodState?.step === 'asked' && <div className="eod-banner">📊 EOD Mode — reply with numbered answers (1. ... 2. ...)</div>}
+          {updateTaskState?.step === 'picking' && <div className="update-banner">✏️ Update Mode — reply with the number of the thread to update</div>}
+          <div className="pills">
+            <button className="pill" onClick={() => setChatInput('Add task: ')}>＋ Add Task</button>
+            <button className="pill" onClick={() => setChatInput('Update task: ')}>✏️ Update Task</button>
+            <button className="pill eod-pill" onClick={startEod} disabled={aiLoading}>📊 Generate EOD</button>
+          </div>
+          <div className="chat-row">
+            <textarea
+              className="chat-textarea"
+              value={chatInput}
+              onChange={e => setChatInput(e.target.value)}
+              placeholder={eodState?.step === 'asked' ? 'Type numbered updates...' : updateTaskState?.step === 'picking' ? 'Reply with a number...' : 'Type a task or message...'}
+              rows={1}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(chatInput); } }}
+            />
+            {speechSupported && (
+              <button className={`mic-btn ${isListening ? 'listening' : ''}`} onClick={toggleVoice} title="Voice input">🎤</button>
+            )}
+            <button className="send-btn" onClick={() => sendChat(chatInput)} disabled={aiLoading || !chatInput.trim()}>↑</button>
+          </div>
+        </div>
+      </div>
+    );
+
+    const renderBoard = () => {
+      const allTasks = Object.values(tasks);
+      return (
+        <div className="board">
+          <div className="board-toolbar">
+            <button className="board-add-btn" onClick={() => setEditTask(newTaskTemplate())}>+ Add Task Manually</button>
+            <button className="board-settings-btn" onClick={() => setShowCatSettings(true)} title="Edit categories">⚙️</button>
+          </div>
+          {categories.map(col => {
+            const colTasks = allTasks
+              .filter(t => t.category === col.id)
+              .sort((a, b) => new Date(a.dueDate||'9999-12-31') - new Date(b.dueDate||'9999-12-31'));
+            const collapsed = collapsedCols[col.id];
+            return (
+              <div key={col.id} className="column">
+                <div className="col-header" style={{ borderLeftColor: col.color, borderLeftWidth: 4, borderLeftStyle: 'solid' }}
+                  onClick={() => setCollapsedCols(p => ({ ...p, [col.id]: !p[col.id] }))}>
+                  <div className="col-header-left">
+                    <div className="col-dot" style={{ background: col.color }}/>
+                    <span className="col-label">{col.label}</span>
+                  </div>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <span className="col-count">{colTasks.length}</span>
+                    <span className="col-chevron">{collapsed ? '▼' : '▲'}</span>
+                  </div>
+                </div>
+                {!collapsed && (
+                  <div className="task-list">
+                    {colTasks.length === 0
+                      ? <div className="col-empty">No tasks</div>
+                      : colTasks.map(task => (
+                          <div key={task.id} className="task-card" onClick={() => setEditTask({ ...task, _exists: true })}>
+                            <div className="task-card-top">
+                              <div className="task-title">{task.title}</div>
+                              <span className={`status-chip ${task.status}`}>{STATUS_OPTIONS.find(s=>s.value===task.status)?.label||task.status}</span>
+                            </div>
+                            <div className="task-meta">
+                              {task.dueDate
+                                ? <span className={`due-badge ${isOverdue(task.dueDate, task.status) ? 'overdue' : ''}`}>
+                                    📅 {fmtDate(task.dueDate)}{isOverdue(task.dueDate, task.status) ? ' ⚠️' : ''}
+                                  </span>
+                                : <span className="due-badge overdue">⚠️ No due date</span>
+                              }
+                              {threads[task.id]?.messages?.length > 0 && (
+                                <span style={{ fontSize: 11, color: 'var(--text2)' }}>🧵 {threads[task.id].messages.length}</span>
+                              )}
+                            </div>
+                          </div>
+                        ))
+                    }
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+
+    const renderThreads = () => {
+      if (activeThread) {
+        const task = tasks[activeThread];
+        if (!task) { setActiveThread(null); return null; }
+        const thread = threads[activeThread] || { messages: [] };
+        const col    = categories.find(c => c.id === task.category);
+        return (
+          <div className="thread-view-wrap">
+            <div className="thread-view-hdr">
+              <button className="back-btn" onClick={() => setActiveThread(null)}>←</button>
+              <div className="thread-view-info">
+                <div className="thread-view-title">{task.title}</div>
+                <div className="thread-view-sub">
+                  {task.dueDate ? `Due ${fmtDate(task.dueDate)}` : 'No due date'}
+                  <span>·</span>
+                  <span className={`status-chip ${task.status}`} style={{ fontSize: 10 }}>{STATUS_OPTIONS.find(s=>s.value===task.status)?.label||task.status}</span>
+                  {col && <><span>·</span><span style={{ color: col.color, fontWeight: 600 }}>{col.label}</span></>}
+                </div>
+              </div>
+              <button className="icon-btn" onClick={() => setEditTask({ ...task, _exists: true })} title="Edit task">✏️</button>
+            </div>
+            <div className="thread-summary-block">
+              <div className="thread-summary-hdr">
+                <span>📋 Overview</span>
+                <button className="refresh-btn" onClick={() => refreshThreadSummary(activeThread, threads)} disabled={summarizing || !apiKey}>
+                  {summarizing ? '...' : '↻ Refresh'}
+                </button>
+              </div>
+              {summarizing
+                ? <div className="thread-summary-empty">Generating summary...</div>
+                : thread.summary
+                  ? <div className="thread-summary-text">{thread.summary}</div>
+                  : <div className="thread-summary-empty">No summary yet — add an update or tap ↻ Refresh.</div>
+              }
+            </div>
+            <div className="decision-block">
+              <div className="decision-block-hdr">
+                <span>🔮 Decision</span>
+                <button className="decision-suggest-btn" onClick={() => suggestDecisionOptions(task)} disabled={decisionDraftLoading}>
+                  {decisionDraftLoading ? '...' : '✨ AI Suggest'}
+                </button>
+              </div>
+              {task.decisionQuestion
+                ? <div className="decision-question">{task.decisionQuestion}</div>
+                : <div className="decision-empty">No question set — add one in the task.</div>
+              }
+              {decisionDraft !== null
+                ? <>
+                    <textarea className="decision-draft-area" value={decisionDraft} onChange={e => setDecisionDraft(e.target.value)}/>
+                    <div className="decision-draft-btns">
+                      <button className="decision-draft-save" onClick={saveDecisionDraft}>Save Options</button>
+                      <button className="decision-draft-cancel" onClick={() => setDecisionDraft(null)}>Cancel</button>
+                    </div>
+                  </>
+                : task.decisionOptions
+                  ? <div className="decision-options">{task.decisionOptions}</div>
+                  : <div className="decision-empty">No options set — tap ✨ AI Suggest or edit in task.</div>
+              }
+            </div>
+            <div className="updates-list">
+              {thread.messages.length === 0 && <div className="thread-empty">No updates yet. Add one below or run EOD.</div>}
+              {thread.messages.map(m => (
+                <div key={m.id} className={`update-entry ${m.source === 'eod' ? 'eod-source' : m.source === 'update' ? 'update-source' : ''}`}>
+                  <div className="update-text">{m.content}</div>
+                  <div className="update-meta">
+                    {fmtTime(m.timestamp)}
+                    {m.source === 'eod' && <span className="update-eod-tag">EOD</span>}
+                    {m.source === 'update' && <span className="update-tag">UPDATE</span>}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="thread-input-row">
+              <textarea className="thread-textarea" value={threadInput} onChange={e => setThreadInput(e.target.value)}
+                placeholder="Add an update..." rows={1}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addUpdate(activeThread, threadInput); } }}/>
+              <button className="send-btn" onClick={() => addUpdate(activeThread, threadInput)} disabled={!threadInput.trim()}>+</button>
+            </div>
+          </div>
+        );
+      }
+
+      const sortedIds = Object.keys(tasks).sort((a, b) => {
+        const ta = tasks[a], tb = tasks[b];
+        const aOpen = ta.status !== 'done', bOpen = tb.status !== 'done';
+        if (aOpen !== bOpen) return aOpen ? -1 : 1;
+        return new Date(ta.dueDate||'9999-12-31') - new Date(tb.dueDate||'9999-12-31');
+      });
+
+      return (
+        <div className="threads-list">
+          {sortedIds.length === 0 && <div className="thread-empty">No threads yet. Tasks added to the board auto-create a thread.</div>}
+          {sortedIds.map(id => {
+            const task    = tasks[id];
+            const thread  = threads[id] || { messages: [] };
+            const updates = thread.messages?.length || 0;
+            const col     = categories.find(c => c.id === task.category);
+            return (
+              <div key={id} className="thread-card" onClick={() => setActiveThread(id)}>
+                <div className="thread-card-top">
+                  <div className="thread-card-title">{task.title}</div>
+                  <span className={`status-chip ${task.status}`} style={{ fontSize: 10, flexShrink: 0 }}>{STATUS_OPTIONS.find(s=>s.value===task.status)?.label||task.status}</span>
+                </div>
+                <div className="thread-card-meta">
+                  {task.dueDate ? `Due ${fmtDate(task.dueDate)}` : 'No due date'}
+                  {col && <span style={{ color: col.color, fontWeight: 600 }}> · {col.label}</span>}
+                  {isOverdue(task.dueDate, task.status) && ' · ⚠️ Overdue'}
+                </div>
+                <span className="thread-update-chip">🧵 {updates} update{updates !== 1 ? 's' : ''}</span>
+              </div>
+            );
+          })}
+        </div>
+      );
+    };
+
+    const renderNotifications = () => (
+      <div>
+        {notifications.length > 0 && (
+          <div style={{ padding: '12px 14px 0' }}>
+            <button className="clear-all-btn" onClick={() => { if (confirm('Clear all notifications?')) setNotifications([]); }}>Clear All</button>
+          </div>
+        )}
+        <div className="notifs-wrap">
+          {notifications.length === 0 && <div className="empty-state">No notifications yet.<br/>Run 📊 Generate EOD to create one.</div>}
+          {notifications.map(n => (
+            <div key={n.id} className={`notif-card ${n.read ? 'is-read' : ''}`}>
+              <div className="notif-time">{fmtTime(n.timestamp)}</div>
+              <div className="notif-body fmt" dangerouslySetInnerHTML={{ __html: fmtHtml(n.content) }}/>
+              <div className="notif-actions">
+                <button className={`notif-action-btn copy-btn ${copiedId === n.id ? 'copied' : ''}`} onClick={() => handleCopy(n.id, n.content)}>
+                  {copiedId === n.id ? '✓ Copied!' : '📋 Copy Text'}
+                </button>
+                {!n.read && (
+                  <button className="notif-action-btn" onClick={() => setNotifications(prev => prev.map(x => x.id === n.id ? {...x, read:true} : x))}>
+                    Mark Read
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+
+    const renderSettings = () => {
+      const costUsd = (tokens.input / 1e6 * 3) + (tokens.output / 1e6 * 15);
+      return (
+        <div className="settings-wrap">
+          <div className="settings-section">
+            <div className="settings-section-label">API Key</div>
+            <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '12px 14px', marginBottom: 6 }}>
+              <div className="form-lbl" style={{ marginBottom: 8 }}>Anthropic API Key</div>
+              <div className="api-key-row">
+                <input type="password" className="api-key-inp" value={apiKeyDraft} onChange={e => setApiKeyDraft(e.target.value)}
+                  placeholder="sk-ant-..." onKeyDown={e => { if (e.key === 'Enter') saveApiKey(); }}/>
+                <button className="api-key-save" onClick={saveApiKey}>Save</button>
+              </div>
+              {apiKey && <div style={{ fontSize: 12, color: '#10b981', marginTop: 8, fontWeight: 600 }}>✓ Key saved</div>}
+            </div>
+          </div>
+
+          <div className="settings-section">
+            <div className="settings-section-label">Display</div>
+            <div className="settings-row">
+              <span className="settings-row-lbl">Dark Mode</span>
+              <button className={`toggle-btn ${darkMode ? 'on' : 'off'}`} onClick={() => setDarkMode(p => !p)}/>
+            </div>
+          </div>
+
+          <div className="settings-section">
+            <div className="settings-section-label">AI Model</div>
+            <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '12px 14px' }}>
+              <select className="settings-select" value={model} onChange={e => setModel(e.target.value)}>
+                <option value="claude-sonnet-4-5">Claude Sonnet 4.5 (Recommended)</option>
+                <option value="claude-opus-4-5">Claude Opus 4.5 (Powerful)</option>
+                <option value="claude-haiku-4-5">Claude Haiku 4.5 (Fast)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="settings-section">
+            <div className="settings-section-label">Usage</div>
+            <div className="settings-row">
+              <div>
+                <div className="settings-row-lbl">AI Cost</div>
+                <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>{tokens.input.toLocaleString()} in · {tokens.output.toLocaleString()} out tokens</div>
+              </div>
+              <div style={{ textAlign: 'right', fontWeight: 600 }}>${costUsd.toFixed(4)}</div>
+            </div>
+            <button className="btn btn-ghost" style={{ fontSize: 12, padding: '7px 14px', marginTop: 2 }}
+              onClick={() => { if (confirm('Reset cost counter?')) setTokens({ input: 0, output: 0 }); }}>
+              Reset Counter
+            </button>
+          </div>
+
+          <div className="settings-section">
+            <div className="settings-section-label">Data</div>
+            <div className="settings-row"><span className="settings-row-lbl">Tasks</span><span className="settings-row-val">{Object.keys(tasks).length}</span></div>
+            <div className="settings-row"><span className="settings-row-lbl">Threads</span><span className="settings-row-val">{Object.keys(threads).length}</span></div>
+            <div className="settings-row"><span className="settings-row-lbl">Notifications</span><span className="settings-row-val">{notifications.length}</span></div>
+            <div style={{ marginTop: 8 }}>
+              <button className="btn btn-danger" style={{ fontSize: 12, padding: '7px 14px', width: '100%' }}
+                onClick={() => { if (confirm('Clear ALL data? Cannot be undone.')) { setTasks({}); setThreads({}); setChatHistory([]); setNotifications([]); setEodState(null); setUpdateTaskState(null); setTokens({ input:0, output:0 }); } }}>
+                Clear All Data
+              </button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const tabs = [
+      { id: 'chat',          label: 'Chat',     icon: '💬' },
+      { id: 'board',         label: 'Board',    icon: '📋' },
+      { id: 'threads',       label: 'Threads',  icon: '🧵' },
+      { id: 'notifications', label: 'Notifs',   icon: '🔔', badge: unreadCount },
+      { id: 'settings',      label: 'Settings', icon: '⚙️' }
+    ];
+
+    return (
+      <div className="app">
+        <div className="header">
+          <h1>TMG Ops Log</h1>
+        </div>
+        <div className="tabbar">
+          {tabs.map(t => (
+            <button key={t.id} className={tab === t.id ? 'active' : ''}
+              onClick={() => { setTab(t.id); if (t.id !== 'threads') setActiveThread(null); }}>
+              <span className="tab-icon">
+                {t.icon}
+                {t.badge > 0 && <span className="tab-dot">{t.badge}</span>}
+              </span>
+              <span className="tab-label">{t.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="content">
+          {tab === 'chat'          && renderChat()}
+          {tab === 'board'         && renderBoard()}
+          {tab === 'threads'       && renderThreads()}
+          {tab === 'notifications' && renderNotifications()}
+          {tab === 'settings'      && renderSettings()}
+        </div>
+        {editTask && <TaskModal task={editTask} categories={categories} onSave={saveTask} onDelete={deleteTask} onClose={() => setEditTask(null)}/>}
+        {showCatSettings && <CategorySettingsModal categories={categories} onSave={saveCategories} onClose={() => setShowCatSettings(false)}/>}
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
+</script>
+</body>
+</html>
