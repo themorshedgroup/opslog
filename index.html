@@ -168,8 +168,14 @@
     .update-entry { background: var(--surface); border-radius: 10px; padding: 10px 12px; border-left: 3px solid var(--accent); }
     .update-entry.eod-source { border-left-color: var(--eod-color); }
     .update-entry.update-source { border-left-color: #10b981; }
+    .update-entry.ai-source { border-left-color: var(--accent); }
     .update-banner { background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; padding: 7px 12px; margin-bottom: 8px; font-size: 12px; color: #10b981; font-weight: 600; text-align: center; }
     .update-tag { background: rgba(16,185,129,0.15); color: #10b981; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
+    .update-ai-tag { background: rgba(212,175,55,0.15); color: var(--accent); font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
+    /* Thread mode toggle */
+    .thread-mode-row { display: flex; gap: 6px; margin-bottom: 8px; }
+    .thread-mode-btn { flex: 1; padding: 7px 0; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
+    .thread-mode-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1a1a; }
 
     /* Thread overview summary */
     .thread-summary-block { background: var(--surface); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; border: 1px solid var(--border); }
@@ -194,6 +200,9 @@
     .decision-draft-btns { display: flex; gap: 8px; margin-top: 8px; }
     .decision-draft-save { padding: 6px 14px; border-radius: 8px; border: none; background: #8b5cf6; color: white; font-size: 13px; font-weight: 600; cursor: pointer; }
     .decision-draft-cancel { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 13px; cursor: pointer; }
+    .decision-checkbox-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+    .decision-checkbox-item { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; font-size: 13px; line-height: 1.45; }
+    .decision-checkbox-item input[type="checkbox"] { margin-top: 2px; accent-color: #8b5cf6; width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
     .update-text { font-size: 14px; line-height: 1.4; }
     .update-meta { font-size: 11px; color: var(--text2); margin-top: 4px; }
     .update-eod-tag { background: var(--eod-bg); color: var(--eod-color); font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
@@ -448,6 +457,8 @@
     const [showCatSettings,setShowCatSettings]= useState(false);
     const [activeThread,   setActiveThread]   = useState(null);
     const [threadInput,    setThreadInput]    = useState('');
+    const [threadMode,     setThreadMode]     = useState('log'); // 'log' | 'assist'
+    const [threadAiLoading,setThreadAiLoading]= useState(false);
     const [collapsedCols,  setCollapsedCols]  = useState({});
     const [copiedId,       setCopiedId]       = useState(null);
     const [isListening,    setIsListening]    = useState(false);
@@ -538,7 +549,7 @@
       }
     };
     useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatHistory, aiLoading]);
-    useEffect(() => { setDecisionDraft(null); setDecisionDraftLoading(false); setSummarizing(false); }, [activeThread]);
+    useEffect(() => { setDecisionDraft(null); setDecisionDraftLoading(false); setSummarizing(false); setThreadMode('log'); setThreadAiLoading(false); }, [activeThread]);
 
     const unreadCount = notifications.filter(n => !n.read).length;
 
@@ -833,17 +844,20 @@ If NO task matches:
           `You are OpsLog AI. Suggest 2–3 clear, practical decision options for this task. Format as a numbered list. One line per option. No preamble — start directly with "1.".`
         );
         const clean = aiText.replace(/ACTION:\{[\s\S]*?\}(?:\s*$)/m, '').trim();
-        setDecisionDraft(clean);
+        const items = clean.split('\n').filter(l => l.trim()).map(l => ({ text: l.replace(/^\d+\.\s*/, '').trim(), checked: true }));
+        setDecisionDraft(items.length ? items : [{ text: clean, checked: true }]);
       } catch (e) {
-        setDecisionDraft(`Error: ${e.message}`);
+        setDecisionDraft([{ text: `Error: ${e.message}`, checked: false }]);
       } finally {
         setDecisionDraftLoading(false);
       }
     };
 
     const saveDecisionDraft = () => {
-      if (decisionDraft === null || !activeThread) return;
-      const nextTasks = { ...tasks, [activeThread]: { ...tasks[activeThread], decisionOptions: decisionDraft, updatedAt: now() } };
+      if (!decisionDraft || !activeThread) return;
+      const checked = Array.isArray(decisionDraft) ? decisionDraft.filter(i => i.checked) : [];
+      const str = checked.map((i, idx) => `${idx + 1}. ${i.text}`).join('\n');
+      const nextTasks = { ...tasks, [activeThread]: { ...tasks[activeThread], decisionOptions: str, updatedAt: now() } };
       setTasks(nextTasks);
       setDecisionDraft(null);
     };
@@ -872,6 +886,39 @@ If NO task matches:
       nextThreads[taskId].messages.push({ id: uid(), content, timestamp: now(), source: 'user' });
       setThreads(nextThreads); setThreadInput('');
       refreshThreadSummary(taskId, nextThreads); // background — no await
+    };
+
+    const handleThreadAssist = async (text) => {
+      if (!text.trim() || !apiKey) return;
+      const taskId = activeThread;
+      const task   = tasks[taskId];
+      // 1. Log user message immediately
+      const withUser = { ...threads };
+      if (!withUser[taskId]) withUser[taskId] = { messages: [] };
+      withUser[taskId] = { ...withUser[taskId], messages: [...withUser[taskId].messages, { id: uid(), content: text, timestamp: now(), source: 'user' }] };
+      setThreads(withUser);
+      setThreadInput('');
+      setThreadAiLoading(true);
+      try {
+        const sysPrompt = `You are OpsLog AI assisting with a specific task. Be concise and practical.\nTask: "${task.title}" | Status: ${task.status} | Due: ${task.dueDate||'none'} | Category: ${getCatLabel(task.category)}\nNotes: ${task.notes||'none'}\nDecision question: ${task.decisionQuestion||'none'}\nOptions: ${task.decisionOptions||'none'}`;
+        const history = (withUser[taskId]?.messages||[]).slice(-10).map(m => ({
+          role: m.source === 'ai' ? 'assistant' : 'user',
+          content: m.content
+        }));
+        const aiText = await callAI(history, sysPrompt);
+        const clean  = aiText.replace(/ACTION:\{[\s\S]*?\}(?:\s*$)/m, '').trim();
+        // 2. Log AI reply
+        const withAi = { ...withUser };
+        withAi[taskId] = { ...withAi[taskId], messages: [...withAi[taskId].messages, { id: uid(), content: clean, timestamp: now(), source: 'ai' }] };
+        setThreads(withAi);
+        refreshThreadSummary(taskId, withAi);
+      } catch(e) {
+        const withErr = { ...withUser };
+        withErr[taskId] = { ...withErr[taskId], messages: [...withErr[taskId].messages, { id: uid(), content: `Error: ${e.message}`, timestamp: now(), source: 'ai' }] };
+        setThreads(withErr);
+      } finally {
+        setThreadAiLoading(false);
+      }
     };
 
     // ── Category settings
@@ -1045,9 +1092,18 @@ If NO task matches:
               }
               {decisionDraft !== null
                 ? <>
-                    <textarea className="decision-draft-area" value={decisionDraft} onChange={e => setDecisionDraft(e.target.value)}/>
+                    <div className="decision-checkbox-list">
+                      {(Array.isArray(decisionDraft) ? decisionDraft : []).map((item, i) => (
+                        <label key={i} className="decision-checkbox-item">
+                          <input type="checkbox" checked={item.checked}
+                            onChange={() => setDecisionDraft(prev => prev.map((it,idx) => idx===i ? {...it, checked: !it.checked} : it))}/>
+                          <span>{item.text}</span>
+                        </label>
+                      ))}
+                    </div>
                     <div className="decision-draft-btns">
-                      <button className="decision-draft-save" onClick={saveDecisionDraft}>Save Options</button>
+                      <button className="decision-draft-save" onClick={saveDecisionDraft}
+                        disabled={!Array.isArray(decisionDraft) || !decisionDraft.some(i => i.checked)}>Save Checked</button>
                       <button className="decision-draft-cancel" onClick={() => setDecisionDraft(null)}>Cancel</button>
                     </div>
                   </>
@@ -1059,21 +1115,29 @@ If NO task matches:
             <div className="updates-list">
               {thread.messages.length === 0 && <div className="thread-empty">No updates yet. Add one below or run EOD.</div>}
               {thread.messages.map(m => (
-                <div key={m.id} className={`update-entry ${m.source === 'eod' ? 'eod-source' : m.source === 'update' ? 'update-source' : ''}`}>
+                <div key={m.id} className={`update-entry ${m.source === 'eod' ? 'eod-source' : m.source === 'update' ? 'update-source' : m.source === 'ai' ? 'ai-source' : ''}`}>
                   <div className="update-text">{m.content}</div>
                   <div className="update-meta">
                     {fmtTime(m.timestamp)}
-                    {m.source === 'eod' && <span className="update-eod-tag">EOD</span>}
+                    {m.source === 'eod'    && <span className="update-eod-tag">EOD</span>}
                     {m.source === 'update' && <span className="update-tag">UPDATE</span>}
+                    {m.source === 'ai'     && <span className="update-ai-tag">AI</span>}
                   </div>
                 </div>
               ))}
             </div>
+            <div className="thread-mode-row">
+              <button className={`thread-mode-btn ${threadMode==='log' ? 'active' : ''}`} onClick={() => setThreadMode('log')}>📝 Log</button>
+              <button className={`thread-mode-btn ${threadMode==='assist' ? 'active' : ''}`} onClick={() => setThreadMode('assist')}>✨ Assist</button>
+            </div>
             <div className="thread-input-row">
               <textarea className="thread-textarea" value={threadInput} onChange={e => setThreadInput(e.target.value)}
-                placeholder="Add an update..." rows={1}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); addUpdate(activeThread, threadInput); } }}/>
-              <button className="send-btn" onClick={() => addUpdate(activeThread, threadInput)} disabled={!threadInput.trim()}>+</button>
+                placeholder={threadMode === 'assist' ? 'Ask AI about this task...' : 'Add an update...'}
+                rows={1}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); threadMode === 'assist' ? handleThreadAssist(threadInput) : addUpdate(activeThread, threadInput); } }}/>
+              <button className="send-btn" onClick={() => threadMode === 'assist' ? handleThreadAssist(threadInput) : addUpdate(activeThread, threadInput)} disabled={!threadInput.trim() || threadAiLoading}>
+                {threadAiLoading ? '…' : '+'}
+              </button>
             </div>
           </div>
         );
