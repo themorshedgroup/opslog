@@ -169,6 +169,10 @@
     .update-entry.eod-source    { border-right: none; border-left: 3px solid var(--eod-color); }
     .update-entry.update-source { border-right: none; border-left: 3px solid #10b981; }
     .update-entry.ai-source     { border-right: none; border-left: 3px solid #3b82f6; }
+    .update-entry.agenda-source { border-right: none; border-left: 3px solid #f59e0b; }
+    .agenda-pill { background: #f59e0b22; border-color: #f59e0b; color: #f59e0b; }
+    .agenda-banner { background: #fff8e7; border-color: #f59e0b; color: #b45309; }
+    html.dark .agenda-banner { background: #2d1f00; border-color: #f59e0b; color: #fcd34d; }
     .update-banner { background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; padding: 7px 12px; margin-bottom: 8px; font-size: 12px; color: #10b981; font-weight: 600; text-align: center; }
     .update-tag { background: rgba(16,185,129,0.15); color: #10b981; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
     .update-ai-tag { background: rgba(59,130,246,0.15); color: #3b82f6; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
@@ -463,6 +467,7 @@
     const [tokens,        setTokens]        = useState(() => ls.get('ol-tok', { input: 0, output: 0 }));
     const [eodState,      setEodState]      = useState(() => ls.get('ol-eod', null));
     const [updateTaskState, setUpdateTaskState] = useState(() => ls.get('ol-upd', null));
+    const [agendaState,   setAgendaState]   = useState(() => ls.get('ol-agd', null));
 
     const [chatInput,      setChatInput]      = useState('');
     const [aiLoading,      setAiLoading]      = useState(false);
@@ -498,6 +503,7 @@
     useEffect(() => ls.set('ol-tok',     tokens),        [tokens]);
     useEffect(() => ls.set('ol-eod',     eodState),      [eodState]);
     useEffect(() => ls.set('ol-upd',     updateTaskState), [updateTaskState]);
+    useEffect(() => ls.set('ol-agd',     agendaState),   [agendaState]);
     useEffect(() => ls.set('ol-mdl',     model),         [model]);
     useEffect(() => { ls.set('ol-dk', darkMode); document.documentElement.classList.toggle('dark', darkMode); }, [darkMode]);
     useEffect(() => { document.documentElement.classList.toggle('dark', ls.get('ol-dk', false)); }, []);
@@ -679,6 +685,7 @@ ACTION:{"type":"TYPE","payload":{...}}
       try {
         if (text.toLowerCase().startsWith('update task')) { await handleUpdateTaskFlow(text); return; }
         if (updateTaskState?.step === 'picking') { await handleUpdatePick(text); return; }
+        if (agendaState?.step === 'asked') { await handleAgendaResponse(text); return; }
         if (eodState?.step === 'asked') { await handleEodResponse(text); return; }
         const history = chatHistory.filter(m => m.role && m.content).map(m => ({ role: m.role, content: m.content }));
         history.push({ role: 'user', content: text });
@@ -745,6 +752,58 @@ ACTION:{"type":"TYPE","payload":{...}}
         );
         setNotifications(prev => [{ id: uid(), content: summary, timestamp: now(), read: false }, ...prev]);
         setChatHistory(prev => [...prev, { role: 'assistant', content: summary, _show: `✅ Updates saved to threads. EOD summary added to Notifications.\n\n${summary}` }]);
+      } catch (e) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
+      }
+    };
+
+    // ── Agenda
+    const startAgenda = async () => {
+      if (aiLoading) return;
+      const openTasks = Object.values(tasks).filter(t => t.status !== 'done');
+      if (!openTasks.length) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: 'No open tasks found for agenda.', _show: 'No open tasks found for agenda.' }]);
+        return;
+      }
+      setChatHistory(prev => [...prev, { role: 'user', content: 'Agenda', _show: '📋 Agenda' }]);
+      setAiLoading(true);
+      try {
+        const taskLines = openTasks.map((t, i) =>
+          `${i + 1}. [${getCatLabel(t.category)}] ${t.title}${t.dueDate ? ' (due ' + fmtDate(t.dueDate) + ')' : ''}${t.status === 'in-progress' ? ' — IN PROGRESS' : t.status === 'decision' ? ' — NEEDS DECISION' : ''}`
+        ).join('\n');
+        const aiText = await callAI(
+          [{ role: 'user', content: `Open tasks:\n${taskLines}\n\nGenerate numbered follow-up questions or action items for today.` }],
+          `You are an operations assistant. Given the open tasks below, generate a numbered list of focused follow-up questions or action items the user should address today. One question per task that needs attention. Be concise and direct.`
+        );
+        setAgendaState({ tasks: openTasks, step: 'asked' });
+        setChatHistory(prev => [...prev, { role: 'assistant', content: aiText + '\n\n_Reply with numbered answers (e.g. "1. done 2. following up with client")_', _show: aiText + '\n\n_Reply with numbered answers (e.g. "1. done 2. following up with client")_' }]);
+      } catch (e) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
+      } finally { setAiLoading(false); }
+    };
+
+    const handleAgendaResponse = async (responseText) => {
+      try {
+        const numbered = parseNumbered(responseText);
+        const agdTasks = agendaState.tasks;
+        const nextThreads = { ...threads };
+        let logged = 0;
+        Object.entries(numbered).forEach(([numStr, updateText]) => {
+          const idx = parseInt(numStr) - 1;
+          if (idx >= 0 && idx < agdTasks.length) {
+            const task = agdTasks[idx];
+            if (!nextThreads[task.id]) nextThreads[task.id] = { messages: [] };
+            nextThreads[task.id].messages.push({ id: uid(), content: updateText, timestamp: now(), source: 'agenda' });
+            logged++;
+          }
+        });
+        setThreads(nextThreads);
+        setAgendaState(null);
+        Object.entries(numbered).forEach(([numStr]) => {
+          const idx = parseInt(numStr) - 1;
+          if (idx >= 0 && idx < agdTasks.length) refreshThreadSummary(agdTasks[idx].id, nextThreads);
+        });
+        setChatHistory(prev => [...prev, { role: 'assistant', content: `✅ Logged ${logged} agenda update${logged !== 1 ? 's' : ''} to task threads.`, _show: `✅ Logged ${logged} agenda update${logged !== 1 ? 's' : ''} to task threads.` }]);
       } catch (e) {
         setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
       }
@@ -1000,11 +1059,13 @@ If NO task matches:
           <div ref={chatEndRef}/>
         </div>
         <div className="chat-input-area">
+          {agendaState?.step === 'asked' && <div className="eod-banner agenda-banner">📋 Agenda active — reply with numbered answers (1. ... 2. ...)</div>}
           {eodState?.step === 'asked' && <div className="eod-banner">📊 EOD Mode — reply with numbered answers (1. ... 2. ...)</div>}
           {updateTaskState?.step === 'picking' && <div className="update-banner">✏️ Update Mode — reply with the number of the thread to update</div>}
           <div className="pills">
             <button className="pill" onClick={() => setChatInput('Add task: ')}>＋ Add Task</button>
             <button className="pill" onClick={() => setChatInput('Update task: ')}>✏️ Update Task</button>
+            <button className="pill agenda-pill" onClick={startAgenda} disabled={aiLoading}>📋 Agenda</button>
             <button className="pill eod-pill" onClick={startEod} disabled={aiLoading}>📊 Generate EOD</button>
             <button className="pill" onClick={() => { if (window.confirm('Clear chat history?')) setChatHistory([]); }}>🗑️ Clear Chat</button>
           </div>
@@ -1014,7 +1075,7 @@ If NO task matches:
               className="chat-textarea"
               value={chatInput}
               onChange={e => setChatInput(e.target.value)}
-              placeholder={eodState?.step === 'asked' ? 'Type numbered updates...' : updateTaskState?.step === 'picking' ? 'Reply with a number...' : 'Type a task or message...'}
+              placeholder={agendaState?.step === 'asked' ? 'Type numbered answers...' : eodState?.step === 'asked' ? 'Type numbered updates...' : updateTaskState?.step === 'picking' ? 'Reply with a number...' : 'Type a task or message...'}
               rows={1}
               onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(chatInput); } }}
             />
@@ -1157,7 +1218,7 @@ If NO task matches:
             <div className="updates-list">
               {thread.messages.length === 0 && <div className="thread-empty">No updates yet. Add one below or run EOD.</div>}
               {thread.messages.map(m => (
-                <div key={m.id} className={`update-entry ${m.source === 'eod' ? 'eod-source' : m.source === 'update' ? 'update-source' : m.source === 'ai' ? 'ai-source' : ''}`}>
+                <div key={m.id} className={`update-entry ${m.source === 'eod' ? 'eod-source' : m.source === 'update' ? 'update-source' : m.source === 'ai' ? 'ai-source' : m.source === 'agenda' ? 'agenda-source' : ''}`}>
                   {m.source === 'ai'
                     ? <div className="update-text" dangerouslySetInnerHTML={{ __html: fmtHtml(m.content) }}/>
                     : <div className="update-text">{m.content}</div>
@@ -1167,6 +1228,7 @@ If NO task matches:
                     {m.source === 'eod'    && <span className="update-eod-tag">EOD</span>}
                     {m.source === 'update' && <span className="update-tag">UPDATE</span>}
                     {m.source === 'ai'     && <span className="update-ai-tag">AI</span>}
+                    {m.source === 'agenda' && <span className="update-tag" style={{background:'#fff8e7',color:'#b45309',borderColor:'#f59e0b'}}>AGENDA</span>}
                   </div>
                   {m.source === 'ai' && (
                     <button className="thread-copy-btn" onClick={() => { navigator.clipboard.writeText(m.content); setCopiedId(m.id); setTimeout(() => setCopiedId(null), 1500); }}>
