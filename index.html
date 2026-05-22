@@ -69,8 +69,7 @@
     .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 9px; }
     .pill { padding: 6px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.12s; }
     .pill:active { transform: scale(0.94); }
-    .pill.eod-pill { background: var(--eod-color); color: white; border-color: var(--eod-color); }
-    .pill.eod-symon-pill { background: #6d28d9; border-color: #6d28d9; }
+    .pill.pill-active { background: var(--accent); color: #1a1a1a; border-color: var(--accent); font-weight: 600; }
     .chat-row { display: flex; gap: 8px; align-items: flex-end; }
     .chat-textarea { flex: 1; padding: 10px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; resize: none; min-height: 42px; max-height: 240px; overflow-y: auto; outline: none; font-family: inherit; line-height: 1.4; transition: border-color 0.15s; }
     .chat-textarea:focus { border-color: var(--accent); }
@@ -179,8 +178,6 @@
     .update-entry.update-source { border-right: none; border-left: 3px solid #10b981; }
     .update-entry.ai-source     { border-right: none; border-left: 3px solid #3b82f6; }
     .update-entry.agenda-source { border-right: none; border-left: 3px solid #f59e0b; }
-    .agenda-pill { background: #f59e0b22; border-color: #f59e0b; color: #f59e0b; }
-    .accomplish-pill { background: #10b98122; border-color: #10b981; color: #10b981; }
     .agenda-banner { background: #fff8e7; border-color: #f59e0b; color: #b45309; }
     html.dark .agenda-banner { background: #2d1f00; border-color: #f59e0b; color: #fcd34d; }
     .update-banner { background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; padding: 7px 12px; margin-bottom: 8px; font-size: 12px; color: #10b981; font-weight: 600; text-align: center; }
@@ -504,6 +501,7 @@
     const [agendaState,   setAgendaState]   = useState(() => ls.get('ol-agd', null));
 
     const [chatInput,      setChatInput]      = useState('');
+    const [activePill,     setActivePill]     = useState(null);
     const [aiLoading,      setAiLoading]      = useState(false);
     const [editTask,       setEditTask]       = useState(null);
     const [showCatSettings,setShowCatSettings]= useState(false);
@@ -599,11 +597,10 @@
         manualStopRef.current = true;
         rec.stop();
       } else {
-        priorTextRef.current    = '';
+        priorTextRef.current    = chatInput;
         sessionFinalRef.current = '';
         manualStopRef.current   = false;
         lastSpeechRef.current   = Date.now();
-        setChatInput('');
         rec.start();
         setIsListening(true);
       }
@@ -725,6 +722,7 @@ ACTION:{"type":"TYPE","payload":{...}}
     const sendChat = async (text) => {
       if (!text.trim() || aiLoading) return;
       setChatInput('');
+      setActivePill(null);
       setChatHistory(prev => [...prev, { role: 'user', content: text, _show: text }]);
       setAiLoading(true);
       try {
@@ -1222,13 +1220,13 @@ No preamble, no explanation — just the JSON.`
           {eodState?.step === 'asked' && <div className="eod-banner">📊 {eodState.target === 'tarek' ? 'EOD: Tarek' : 'EOD: Symon'} — reply with numbered answers (1. ... 2. ...)</div>}
           {updateTaskState?.step === 'picking' && <div className="update-banner">✏️ Update Mode — reply with the number of the thread to update</div>}
           <div className="pills">
-            <button className="pill accomplish-pill" onClick={() => setChatInput('Accomplishment: ')}>🏆 Accomplishments</button>
-            <button className="pill" onClick={() => setChatInput('Add task: ')}>＋ Add Task</button>
-            <button className="pill" onClick={() => setChatInput('Update task: ')}>✏️ Update Task</button>
-            <button className="pill agenda-pill" onClick={startAgenda} disabled={aiLoading}>📋 Agenda</button>
-            <button className="pill eod-pill" onClick={() => startEod('tarek')} disabled={aiLoading}>📊 EOD: Tarek</button>
-            <button className="pill eod-pill eod-symon-pill" onClick={() => startEod('symon')} disabled={aiLoading}>📊 EOD: Symon</button>
-            <button className="pill" onClick={() => { if (window.confirm('Clear chat history?')) setChatHistory([]); }}>🗑️ Clear Chat</button>
+            <button className={`pill ${activePill==='accomplish' ? 'pill-active' : ''}`} onClick={() => { setChatInput('Accomplishment: '); setActivePill('accomplish'); }}>🏆 Accomplishments</button>
+            <button className={`pill ${activePill==='addtask' ? 'pill-active' : ''}`} onClick={() => { setChatInput('Add task: '); setActivePill('addtask'); }}>＋ Add Task</button>
+            <button className={`pill ${activePill==='updatetask' ? 'pill-active' : ''}`} onClick={() => { setChatInput('Update task: '); setActivePill('updatetask'); }}>✏️ Update Task</button>
+            <button className={`pill ${activePill==='agenda' ? 'pill-active' : ''}`} onClick={() => { setActivePill('agenda'); startAgenda(); }} disabled={aiLoading}>📋 Agenda</button>
+            <button className={`pill ${activePill==='eod-tarek' ? 'pill-active' : ''}`} onClick={() => { setActivePill('eod-tarek'); startEod('tarek'); }} disabled={aiLoading}>📊 EOD: Tarek</button>
+            <button className={`pill ${activePill==='eod-symon' ? 'pill-active' : ''}`} onClick={() => { setActivePill('eod-symon'); startEod('symon'); }} disabled={aiLoading}>📊 EOD: Symon</button>
+            <button className={`pill ${activePill==='clear' ? 'pill-active' : ''}`} onClick={() => { if (window.confirm('Clear chat history?')) { setChatHistory([]); setActivePill(null); } }}>🗑️ Clear Chat</button>
           </div>
           <div className="chat-row">
             <textarea
