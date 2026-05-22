@@ -159,8 +159,11 @@
     .thread-card-title { font-size: 14px; font-weight: 600; line-height: 1.3; }
     .thread-card-meta { font-size: 12px; color: var(--text2); margin-bottom: 5px; }
     .thread-update-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: var(--surface2); color: var(--text2); }
-    .thread-view-wrap { padding: 0 14px 16px; }
-    .thread-view-hdr { padding: 12px 14px; border-bottom: 1px solid var(--border); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; background: var(--bg); margin-left: -14px; margin-right: -14px; }
+    .thread-view-wrap { display: flex; flex-direction: column; height: calc(100vh - 49px - 68px - env(safe-area-inset-bottom)); padding: 0; }
+    .thread-scrollable { flex: 1; overflow-y: auto; padding: 0 14px; }
+    .thread-view-hdr { padding: 12px 14px; border-bottom: 1px solid var(--border); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; background: var(--bg); margin-left: -14px; margin-right: -14px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
+    .thread-bottom { flex-shrink: 0; background: var(--bg); border-top: 1px solid var(--border); padding: 10px 14px 14px; }
+    .thread-mode-label { text-align: center; font-size: 11px; color: var(--text2); margin-top: 6px; opacity: 0.75; letter-spacing: 0.3px; }
     .back-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--surface); color: var(--text); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .thread-view-info { flex: 1; }
     .thread-view-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
@@ -487,6 +490,7 @@
     const [aiLoading,      setAiLoading]      = useState(false);
     const [editTask,       setEditTask]       = useState(null);
     const [showCatSettings,setShowCatSettings]= useState(false);
+    const [showHelp,       setShowHelp]       = useState(false);
     const [activeThread,   setActiveThread]   = useState(null);
     const [threadInput,    setThreadInput]    = useState('');
     const [threadMode,     setThreadMode]     = useState('log'); // 'log' | 'assist'
@@ -1262,6 +1266,7 @@ If NO task matches:
         const col    = categories.find(c => c.id === task.category);
         return (
           <div className="thread-view-wrap">
+            <div className="thread-scrollable">
             <div className="thread-view-hdr">
               <button className="back-btn" onClick={() => setActiveThread(null)}>←</button>
               <div className="thread-view-info">
@@ -1353,18 +1358,24 @@ If NO task matches:
                 <div className="typing-dots"><span/><span/><span/></div>
               </div>
             )}
-            <div className="thread-mode-row">
-              <button className={`thread-mode-btn ${threadMode==='log' ? 'active' : ''}`} onClick={() => setThreadMode('log')}>📝 Log</button>
-              <button className={`thread-mode-btn ${threadMode==='assist' ? 'active' : ''}`} onClick={() => setThreadMode('assist')}>✨ Assist</button>
             </div>
-            <div className="thread-input-row">
-              <textarea ref={threadTextareaRef} className="thread-textarea" value={threadInput} onChange={e => setThreadInput(e.target.value)}
-                placeholder={threadMode === 'assist' ? 'Ask AI about this task...' : 'Add an update...'}
-                rows={1}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); threadMode === 'assist' ? handleThreadAssist(threadInput) : addUpdate(activeThread, threadInput); } }}/>
-              <button className="send-btn" onClick={() => threadMode === 'assist' ? handleThreadAssist(threadInput) : addUpdate(activeThread, threadInput)} disabled={!threadInput.trim() || threadAiLoading}>
-                {threadAiLoading ? '…' : '+'}
-              </button>
+            <div className="thread-bottom">
+              <div className="thread-mode-row">
+                <button className={`thread-mode-btn ${threadMode==='log' ? 'active' : ''}`} onClick={() => setThreadMode('log')}>📝 Log</button>
+                <button className={`thread-mode-btn ${threadMode==='assist' ? 'active' : ''}`} onClick={() => setThreadMode('assist')}>✨ Assist</button>
+              </div>
+              <div className="thread-input-row">
+                <textarea ref={threadTextareaRef} className="thread-textarea" value={threadInput} onChange={e => setThreadInput(e.target.value)}
+                  placeholder={threadMode === 'assist' ? 'Ask AI about this task...' : 'Add an update...'}
+                  rows={1}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); threadMode === 'assist' ? handleThreadAssist(threadInput) : addUpdate(activeThread, threadInput); } }}/>
+                <button className="send-btn" onClick={() => threadMode === 'assist' ? handleThreadAssist(threadInput) : addUpdate(activeThread, threadInput)} disabled={!threadInput.trim() || threadAiLoading}>
+                  {threadAiLoading ? '…' : '+'}
+                </button>
+              </div>
+              <div className="thread-mode-label">
+                {threadMode === 'log' ? '📝 Log Mode' : '✨ AI Assist'}
+              </div>
             </div>
           </div>
         );
@@ -1444,6 +1455,9 @@ If NO task matches:
       const costUsd = (tokens.input / 1e6 * 3) + (tokens.output / 1e6 * 15);
       return (
         <div className="settings-wrap">
+          <button className="btn btn-primary" style={{width:'100%', marginBottom:16}} onClick={() => setShowHelp(true)}>
+            📖 Help Guide & SOP
+          </button>
           <div className="settings-section">
             <div className="settings-section-label">API Key</div>
             <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '12px 14px', marginBottom: 6 }}>
@@ -1541,6 +1555,137 @@ If NO task matches:
         </div>
         {editTask && <TaskModal task={editTask} categories={categories} onSave={saveTask} onDelete={deleteTask} onClose={() => setEditTask(null)}/>}
         {showCatSettings && <CategorySettingsModal categories={categories} onSave={saveCategories} onClose={() => setShowCatSettings(false)}/>}
+        {showHelp && (
+          <div className="overlay" onClick={e => { if (e.target.classList.contains('overlay')) setShowHelp(false); }}>
+            <div className="modal" style={{maxHeight:'92vh'}}>
+              <div className="modal-handle"/>
+              <div className="modal-hdr">
+                <span className="modal-hdr-title">📖 TMG Ops Log — Training Guide</span>
+                <button className="icon-btn" onClick={() => setShowHelp(false)}>×</button>
+              </div>
+              <div style={{fontSize:13, lineHeight:1.65, color:'var(--text)', paddingBottom:8}} dangerouslySetInnerHTML={{__html: `
+<p style="color:var(--text2);font-size:12px;margin-bottom:16px">Version 1.0 · For: The Morshed Group — All Team Members</p>
+
+<h3 style="margin:0 0 6px;font-size:15px">1. What Is TMG Ops Log?</h3>
+<p>TMG Ops Log is an internal operations tracking tool for managing tasks, logging updates, tracking decisions, and generating end-of-day (EOD) summaries — all powered by AI.</p>
+<p style="margin-top:6px"><strong>Who uses it:</strong><br>
+• <strong>Symon (Ops Manager)</strong> — Manages tasks, logs progress, generates EOD reports<br>
+• <strong>Tarek (CEO)</strong> — Reads EOD notifications, makes decisions<br>
+• <strong>Team members</strong> — View tasks, add thread updates, log accomplishments</p>
+
+<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
+
+<h3 style="margin:0 0 6px;font-size:15px">2. Getting Started</h3>
+<p>Go to <strong>⚙️ Settings</strong> → enter your <strong>Anthropic API Key</strong> (sk-ant-...) → tap <strong>Save</strong>. Select your preferred AI model (Sonnet recommended).</p>
+
+<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
+
+<h3 style="margin:0 0 6px;font-size:15px">3. The 5 Tabs</h3>
+<p>
+💬 <strong>Chat</strong> — AI assistant, EOD, Agenda, quick actions<br>
+📋 <strong>Board</strong> — Task board by category<br>
+🧵 <strong>Threads</strong> — Full update history per task<br>
+🔔 <strong>Notifs</strong> — EOD summaries and notifications<br>
+⚙️ <strong>Settings</strong> — API key, model, dark mode, data</p>
+
+<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
+
+<h3 style="margin:0 0 6px;font-size:15px">4. Board — Managing Tasks</h3>
+<p><strong>Create a task:</strong> Tap <strong>+ Add Task Manually</strong> on the Board, or type <code>Add task: [description]</code> in Chat.</p>
+<p style="margin-top:8px"><strong>Task fields:</strong><br>
+• <strong>Title</strong> — What needs to be done (required)<br>
+• <strong>Category</strong> — Which column it belongs to<br>
+• <strong>Due Date</strong> — When it's due (required)<br>
+• <strong>Status</strong> — Open / In Progress / Decision / Done<br>
+• <strong>Notes</strong> — Context or background<br>
+• <strong>Decision Question</strong> — What needs to be decided?<br>
+• <strong>Decision Options</strong> — Numbered choices<br>
+• <strong>Decision Maker</strong> — Tarek or Symon (routes to correct EOD)<br>
+• <strong>Email Link</strong> — URL to related email</p>
+
+<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
+
+<h3 style="margin:0 0 6px;font-size:15px">5. Threads — Tracking Updates</h3>
+<p>Every task has a thread. Tap any task in Threads tab to see its full history.</p>
+<p style="margin-top:8px"><strong>Update sources (color-coded):</strong><br>
+🟠 <strong>EOD</strong> — Logged during EOD check-in<br>
+🟢 <strong>UPDATE</strong> — Manually logged or via Update Task chat<br>
+🔵 <strong>AI</strong> — AI Assist mode response<br>
+🟡 <strong>AGENDA</strong> — Logged during Agenda check-in</p>
+<p style="margin-top:8px"><strong>Log vs Assist mode:</strong> Use <strong>📝 Log</strong> to add a plain update. Use <strong>✨ Assist</strong> to chat with AI about the specific task.</p>
+<p style="margin-top:8px"><strong>Decision Block:</strong> Use <strong>✨ AI Suggest</strong> to generate decision options. Tap <strong>➕ Add More</strong> to get additional options. Check the ones you want and tap <strong>Save Checked</strong>.</p>
+
+<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
+
+<h3 style="margin:0 0 6px;font-size:15px">6. Chat — Daily Workflows</h3>
+<p><strong>Pill Button Reference:</strong></p>
+<p>
+🏆 <strong>Accomplishments</strong> — Log completed work as a Done task with today's date<br>
+＋ <strong>Add Task</strong> — Create a task via AI<br>
+✏️ <strong>Update Task</strong> — Route a quick update to the right task<br>
+📋 <strong>Agenda</strong> — Morning check-in with action items per open task<br>
+📊 <strong>EOD: Symon → Tarek</strong> — End-of-day report for Tarek<br>
+📊 <strong>EOD: Symon</strong> — Personal end-of-day summary<br>
+🗑️ <strong>Clear Chat</strong> — Clear chat history</p>
+
+<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
+
+<h3 style="margin:0 0 6px;font-size:15px">7. EOD Workflow (Step by Step)</h3>
+<p><strong>1.</strong> Tap <strong>📊 EOD: Symon → Tarek</strong><br>
+<strong>2.</strong> AI asks numbered questions for each open task<br>
+<strong>3.</strong> Reply with numbered answers on one or multiple lines:<br>
+<em>"1. Sent the proposal 2. Waiting on client feedback 3. Meeting confirmed"</em><br>
+<strong>4.</strong> App logs each answer to the task thread<br>
+<strong>5.</strong> EOD notification is generated in <strong>🔔 Notifs</strong> with 3 sections:<br>
+&nbsp;&nbsp;• <strong>Accomplishments</strong> — Done tasks from today<br>
+&nbsp;&nbsp;• <strong>Task Updates</strong> — All open tasks with your answers<br>
+&nbsp;&nbsp;• <strong>Decisions Required</strong> — Tasks assigned to Tarek with A/B/C options</p>
+
+<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
+
+<h3 style="margin:0 0 6px;font-size:15px">8. Agenda Workflow (Step by Step)</h3>
+<p><strong>1.</strong> Tap <strong>📋 Agenda</strong> (best used in the morning)<br>
+<strong>2.</strong> AI generates numbered action items for each open task<br>
+<strong>3.</strong> Reply with numbered answers:<br>
+<em>"1. Done 2. Following up today 3. Scheduled for Thursday"</em><br>
+<strong>4.</strong> Each answer is logged to the task thread with an AGENDA tag</p>
+
+<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
+
+<h3 style="margin:0 0 6px;font-size:15px">9. Accomplishments (Step by Step)</h3>
+<p><strong>1.</strong> Tap <strong>🏆 Accomplishments</strong><br>
+<strong>2.</strong> Type naturally: <em>"Accomplishment: Submitted lease renewal for Unit 302 — for downtown tower"</em><br>
+<strong>3.</strong> AI creates a <strong>Done</strong> task with today's date, short title, and your context as notes<br>
+<strong>4.</strong> It will appear in your next EOD's Accomplishments section</p>
+
+<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
+
+<h3 style="margin:0 0 6px;font-size:15px">10. Symon's Daily Routine</h3>
+<p>☀️ <strong>Morning:</strong> Tap 📋 Agenda → reply with numbered status updates<br>
+🔄 <strong>During day:</strong> Use ✏️ Update Task as things happen · Use 🏆 Accomplishments when you finish something<br>
+🌙 <strong>End of day:</strong> Tap 📊 EOD: Symon → Tarek → reply with updates → check 🔔 Notifs</p>
+
+<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
+
+<h3 style="margin:0 0 6px;font-size:15px">11. Tarek's Reference</h3>
+<p>1. Open <strong>🔔 Notifs</strong> to read EOD summaries<br>
+2. Look for <strong>Decisions Required</strong> — reply to Symon with your choices (e.g., "Task 3: Option B")<br>
+3. Use <strong>📋 Board</strong> to see all tasks at a glance<br>
+4. Tap any task to open its thread and read full history</p>
+
+<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
+
+<h3 style="margin:0 0 6px;font-size:15px">12. Tips</h3>
+<p>
+• Set <strong>Decision Maker</strong> on tasks early — it routes decisions to the right EOD<br>
+• Use <strong>voice input 🎤</strong> for quick hands-free updates<br>
+• <strong>Overdue tasks</strong> show a ⚠️ warning — keep due dates current<br>
+• <strong>Clear All Data</strong> in Settings is permanent — use with caution</p>
+              `}}/>
+            </div>
+          </div>
+        )}
+
       </div>
     );
   }
