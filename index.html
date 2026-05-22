@@ -159,6 +159,11 @@
     .thread-card-title { font-size: 14px; font-weight: 600; line-height: 1.3; }
     .thread-card-meta { font-size: 12px; color: var(--text2); margin-bottom: 5px; }
     .thread-update-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: var(--surface2); color: var(--text2); }
+    .thread-sort-bar { display: flex; align-items: center; gap: 6px; padding: 10px 14px 6px; flex-wrap: wrap; }
+    .thread-sort-label { font-size: 11px; color: var(--text2); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px; }
+    .thread-sort-btn { font-size: 12px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
+    .thread-sort-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1a1a; font-weight: 600; }
+    .thread-last-update { font-size: 11px; color: var(--text2); opacity: 0.8; }
     .thread-view-wrap { display: flex; flex-direction: column; height: calc(100vh - 49px - 68px - env(safe-area-inset-bottom)); padding: 0; }
     .thread-scrollable { flex: 1; overflow-y: auto; padding: 0 14px; }
     .thread-view-hdr { padding: 12px 14px; border-bottom: 1px solid var(--border); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; background: var(--bg); margin-left: -14px; margin-right: -14px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
@@ -321,6 +326,18 @@
   const fmtTime = (iso) => {
     if (!iso) return '';
     return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  };
+
+  const timeAgo = (iso) => {
+    if (!iso) return '';
+    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.floor(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.floor(hrs / 24);
+    if (days === 1) return 'Yesterday';
+    return `${days}d ago`;
   };
 
   const ls = {
@@ -494,6 +511,7 @@
     const [activeThread,   setActiveThread]   = useState(null);
     const [threadInput,    setThreadInput]    = useState('');
     const [threadMode,     setThreadMode]     = useState('log'); // 'log' | 'assist'
+    const [threadSort,     setThreadSort]     = useState({ by: 'lastUpdate', dir: 'desc' });
     const [threadAiLoading,setThreadAiLoading]= useState(false);
     const [collapsedCols,  setCollapsedCols]  = useState({});
     const [copiedId,       setCopiedId]       = useState(null);
@@ -1381,43 +1399,69 @@ If NO task matches:
         );
       }
 
+      const getLastUpdate = (id) => {
+        const msgs = threads[id]?.messages;
+        return msgs?.length ? new Date(msgs[msgs.length - 1].timestamp).getTime() : 0;
+      };
+      const sortDir = threadSort.dir === 'asc' ? 1 : -1;
       const sortedIds = Object.keys(tasks).sort((a, b) => {
         const ta = tasks[a], tb = tasks[b];
-        const aOpen = ta.status !== 'done', bOpen = tb.status !== 'done';
-        if (aOpen !== bOpen) return aOpen ? -1 : 1;
-        return new Date(ta.dueDate||'9999-12-31') - new Date(tb.dueDate||'9999-12-31');
+        if (threadSort.by === 'lastUpdate') return (getLastUpdate(a) - getLastUpdate(b)) * sortDir;
+        if (threadSort.by === 'due') return (new Date(ta.dueDate||'9999-12-31') - new Date(tb.dueDate||'9999-12-31')) * sortDir;
+        if (threadSort.by === 'status') {
+          const o = { open:0, 'in-progress':1, decision:2, done:3 };
+          return ((o[ta.status]||0) - (o[tb.status]||0)) * sortDir;
+        }
+        return 0;
       });
+      const setSortBy = (key) => setThreadSort(prev =>
+        prev.by === key ? { ...prev, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { by: key, dir: 'desc' }
+      );
 
       return (
-        <div className="threads-list">
-          {sortedIds.length === 0 && <div className="thread-empty">No threads yet. Tasks added to the board auto-create a thread.</div>}
-          {sortedIds.map(id => {
-            const task    = tasks[id];
-            const thread  = threads[id] || { messages: [] };
-            const updates = thread.messages?.length || 0;
-            const col     = categories.find(c => c.id === task.category);
-            return (
-              <div key={id} className="thread-card" onClick={() => setActiveThread(id)}>
-                <div className="thread-card-top">
-                  <div className="thread-card-title">{task.title}</div>
-                  <span className={`status-chip ${task.status}`} style={{ fontSize: 10, flexShrink: 0 }}>{STATUS_OPTIONS.find(s=>s.value===task.status)?.label||task.status}</span>
+        <div>
+          <div className="thread-sort-bar">
+            <span className="thread-sort-label">Sort</span>
+            {[['lastUpdate','Last Updated'],['due','Due Date'],['status','Status']].map(([key, label]) => (
+              <button key={key} className={`thread-sort-btn ${threadSort.by===key ? 'active' : ''}`} onClick={() => setSortBy(key)}>
+                {label}{threadSort.by===key ? (threadSort.dir==='desc' ? ' ↓' : ' ↑') : ''}
+              </button>
+            ))}
+          </div>
+          <div className="threads-list">
+            {sortedIds.length === 0 && <div className="thread-empty">No threads yet. Tasks added to the board auto-create a thread.</div>}
+            {sortedIds.map(id => {
+              const task    = tasks[id];
+              const thread  = threads[id] || { messages: [] };
+              const updates = thread.messages?.length || 0;
+              const lastTs  = thread.messages?.length ? thread.messages[thread.messages.length - 1].timestamp : null;
+              const col     = categories.find(c => c.id === task.category);
+              return (
+                <div key={id} className="thread-card" onClick={() => setActiveThread(id)}>
+                  <div className="thread-card-top">
+                    <div className="thread-card-title">{task.title}</div>
+                    <span className={`status-chip ${task.status}`} style={{ fontSize: 10, flexShrink: 0 }}>{STATUS_OPTIONS.find(s=>s.value===task.status)?.label||task.status}</span>
+                  </div>
+                  <div className="thread-card-meta">
+                    {task.dueDate ? `Due ${fmtDate(task.dueDate)}` : 'No due date'}
+                    {col && <span style={{ color: col.color, fontWeight: 600 }}> · {col.label}</span>}
+                    {isOverdue(task.dueDate, task.status) && ' · ⚠️ Overdue'}
+                  </div>
+                  <div className="thread-card-footer">
+                    <span className="thread-update-chip">🧵 {updates} update{updates !== 1 ? 's' : ''}</span>
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      {task.email && (
+                        <button className="gmail-card-btn"
+                          onClick={e => { e.stopPropagation(); window.open(task.email, '_blank'); }}
+                          title="Open email link">📧</button>
+                      )}
+                      {lastTs && <span className="thread-last-update">{timeAgo(lastTs)}</span>}
+                    </div>
+                  </div>
                 </div>
-                <div className="thread-card-meta">
-                  {task.dueDate ? `Due ${fmtDate(task.dueDate)}` : 'No due date'}
-                  {col && <span style={{ color: col.color, fontWeight: 600 }}> · {col.label}</span>}
-                  {isOverdue(task.dueDate, task.status) && ' · ⚠️ Overdue'}
-                </div>
-                <div className="thread-card-footer">
-                  <span className="thread-update-chip">🧵 {updates} update{updates !== 1 ? 's' : ''}</span>
-                  {task.email && (
-                    <button className="gmail-card-btn"
-                      onClick={e => { e.stopPropagation(); window.open(task.email, '_blank'); }}
-                      title="Open email link">📧</button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </div>
       );
     };
