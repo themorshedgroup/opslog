@@ -508,6 +508,7 @@
     const [editTask,       setEditTask]       = useState(null);
     const [showCatSettings,setShowCatSettings]= useState(false);
     const [showHelp,       setShowHelp]       = useState(false);
+    const [showDecisionModal, setShowDecisionModal] = useState(false);
     const [activeThread,   setActiveThread]   = useState(null);
     const [threadInput,    setThreadInput]    = useState('');
     const [threadMode,     setThreadMode]     = useState('log'); // 'log' | 'assist'
@@ -529,6 +530,7 @@
     const chatEndRef        = useRef(null);
     const chatTextareaRef   = useRef(null);
     const threadTextareaRef = useRef(null);
+    const decisionBlockRef  = useRef(null);
 
     // Persist
     useEffect(() => ls.set('ol-cats',    categories),    [categories]);
@@ -1306,6 +1308,7 @@ If NO task matches:
                   {col && <><span>·</span><span style={{ color: col.color, fontWeight: 600 }}>{col.label}</span></>}
                 </div>
               </div>
+              <button className="icon-btn" onClick={() => { setShowDecisionModal(true); suggestDecisionOptions(task); }} title="Quick Decision">🔮</button>
               <button className="icon-btn" onClick={() => setEditTask({ ...task, _exists: true })} title="Edit task">✏️</button>
             </div>
             <div className="thread-summary-block">
@@ -1322,7 +1325,7 @@ If NO task matches:
                   : <div className="thread-summary-empty">No summary yet — add an update or tap ↻ Refresh.</div>
               }
             </div>
-            <div className="decision-block">
+            <div className="decision-block" ref={decisionBlockRef}>
               <div className="decision-block-hdr">
                 <span>🔮 Decision</span>
                 <button className="decision-suggest-btn" onClick={() => suggestDecisionOptions(task)} disabled={decisionDraftLoading}>
@@ -1617,6 +1620,49 @@ If NO task matches:
         </div>
         {editTask && <TaskModal task={editTask} categories={categories} onSave={saveTask} onDelete={deleteTask} onClose={() => setEditTask(null)}/>}
         {showCatSettings && <CategorySettingsModal categories={categories} onSave={saveCategories} onClose={() => setShowCatSettings(false)}/>}
+        {showDecisionModal && activeThread && tasks[activeThread] && (
+          <div className="overlay" onClick={e => { if (e.target.classList.contains('overlay')) { setShowDecisionModal(false); setDecisionDraft(null); } }}>
+            <div className="modal" style={{ maxHeight: '80vh' }}>
+              <div className="modal-handle"/>
+              <div className="modal-hdr">
+                <span className="modal-hdr-title">🔮 Decision</span>
+                <button className="icon-btn" onClick={() => { setShowDecisionModal(false); setDecisionDraft(null); }}>×</button>
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 12 }}>
+                {tasks[activeThread].decisionQuestion ? tasks[activeThread].decisionQuestion : <em>No decision question set on this task.</em>}
+              </div>
+              {decisionDraftLoading && (
+                <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text2)' }}>
+                  <div className="typing-dots"><span/><span/><span/></div>
+                  <div style={{ marginTop: 8, fontSize: 12 }}>Generating options…</div>
+                </div>
+              )}
+              {!decisionDraftLoading && decisionDraft !== null && (
+                <>
+                  <div className="decision-checkbox-list">
+                    {(Array.isArray(decisionDraft) ? decisionDraft : []).map((item, i) => (
+                      <label key={i} className="decision-checkbox-item">
+                        <input type="checkbox" checked={item.checked}
+                          onChange={() => setDecisionDraft(prev => prev.map((it, idx) => idx === i ? { ...it, checked: !it.checked } : it))}/>
+                        <span>{item.text}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <div className="decision-draft-btns" style={{ marginTop: 14 }}>
+                    <button className="decision-draft-cancel"
+                      onClick={() => addMoreDecisionOptions(tasks[activeThread])}
+                      disabled={decisionDraftLoading}>➕ Add More</button>
+                    <button className="decision-draft-save"
+                      onClick={() => { saveDecisionDraft(); setShowDecisionModal(false); }}
+                      disabled={!Array.isArray(decisionDraft) || !decisionDraft.some(i => i.checked)}>Save Checked</button>
+                    <button className="decision-draft-cancel"
+                      onClick={() => { setShowDecisionModal(false); setDecisionDraft(null); }}>Cancel</button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
         {showHelp && (
           <div className="overlay" onClick={e => { if (e.target.classList.contains('overlay')) setShowHelp(false); }}>
             <div className="modal" style={{maxHeight:'92vh'}}>
