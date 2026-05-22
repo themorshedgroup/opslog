@@ -411,7 +411,7 @@
             <input className="form-inp" value={form.title || ''} onChange={set('title')} placeholder="What needs to be done?" autoFocus={isNew}/>
           </div>
           <div className="form-group">
-            <label className="form-lbl">Column</label>
+            <label className="form-lbl">Category</label>
             <select className="form-sel" value={form.category || categories[0]?.id || 'todo'} onChange={set('category')}>
               {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
             </select>
@@ -1013,6 +1013,24 @@ If NO task matches:
       }
     };
 
+    const addMoreDecisionOptions = async (task) => {
+      setDecisionDraftLoading(true);
+      try {
+        const existing = Array.isArray(decisionDraft) ? decisionDraft.map(i => i.text).join('; ') : '';
+        const aiText = await callAI(
+          [{ role: 'user', content: `Task: "${task.title}"\nStatus: ${task.status}\nNotes: ${task.notes||'None'}\nDecision Question: ${task.decisionQuestion||'Not specified'}\nAlready suggested: ${existing}\nRecent thread:\n${getThreadLog(task.id)}` }],
+          `You are OpsLog AI. Suggest 2–3 ADDITIONAL decision options that are different from the ones already listed. Format as a numbered list. One line per option. No preamble — start directly with "1.".`
+        );
+        const clean = aiText.replace(/ACTION:\{[\s\S]*?\}(?:\s*$)/m, '').trim();
+        const newItems = clean.split('\n').filter(l => l.trim()).map(l => ({ text: l.replace(/^\d+\.\s*/, '').trim(), checked: true }));
+        setDecisionDraft(prev => Array.isArray(prev) ? [...prev, ...newItems] : newItems);
+      } catch (e) {
+        console.warn('Add more options failed:', e);
+      } finally {
+        setDecisionDraftLoading(false);
+      }
+    };
+
     const saveDecisionDraft = () => {
       if (!decisionDraft || !activeThread) return;
       const checked = Array.isArray(decisionDraft) ? decisionDraft.filter(i => i.checked) : [];
@@ -1280,6 +1298,9 @@ If NO task matches:
                       ))}
                     </div>
                     <div className="decision-draft-btns">
+                      <button className="decision-draft-cancel" onClick={() => addMoreDecisionOptions(task)} disabled={decisionDraftLoading}>
+                        {decisionDraftLoading ? '...' : '➕ Add More'}
+                      </button>
                       <button className="decision-draft-save" onClick={saveDecisionDraft}
                         disabled={!Array.isArray(decisionDraft) || !decisionDraft.some(i => i.checked)}>Save Checked</button>
                       <button className="decision-draft-cancel" onClick={() => setDecisionDraft(null)}>Cancel</button>
