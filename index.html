@@ -644,6 +644,12 @@
       return thread.messages.slice(-5).map(m => `[${fmtTime(m.timestamp)}] ${m.content}`).join('\n');
     };
 
+    const getFullThreadLog = (taskId) => {
+      const thread = threads[taskId];
+      if (!thread?.messages?.length) return 'No updates logged yet.';
+      return thread.messages.map(m => `[${fmtTime(m.timestamp)}][${m.source?.toUpperCase()||'LOG'}] ${m.content}`).join('\n');
+    };
+
     const catIds = categories.map(c => `"${c.id}"`).join('|');
 
     const systemPrompt = useCallback(() =>
@@ -1034,9 +1040,11 @@ If NO task matches:
       setDecisionDraftLoading(true);
       setDecisionDraft(null);
       try {
+        const fullLog = getFullThreadLog(task.id);
+        const existingOptions = task.decisionOptions ? `\nCurrently saved options:\n${task.decisionOptions}` : '';
         const aiText = await callAI(
-          [{ role: 'user', content: `Task: "${task.title}"\nStatus: ${task.status}\nNotes: ${task.notes||'None'}\nDecision Question: ${task.decisionQuestion||'Not specified'}\nRecent thread:\n${getThreadLog(task.id)}` }],
-          `You are OpsLog AI. Suggest 2–3 clear, practical decision options for this task. Format as a numbered list. One line per option. No preamble — start directly with "1.".`
+          [{ role: 'user', content: `Task: "${task.title}"\nStatus: ${task.status}\nNotes: ${task.notes||'None'}\nDecision Question: ${task.decisionQuestion||'Not specified'}${existingOptions}\n\nFull thread history:\n${fullLog}` }],
+          `You are OpsLog AI. Based on the task details AND its full thread history, suggest 2–3 clear, practical decision options that reflect the task's CURRENT state and any progress already made. If options were previously saved, suggest alternatives or updated versions. Format as a numbered list. One line per option. No preamble — start directly with "1.".`
         );
         const clean = aiText.replace(/ACTION:\{[\s\S]*?\}(?:\s*$)/m, '').trim();
         const items = clean.split('\n').filter(l => l.trim()).map(l => ({ text: l.replace(/^\d+\.\s*/, '').trim(), checked: true }));
@@ -1052,9 +1060,11 @@ If NO task matches:
       setDecisionDraftLoading(true);
       try {
         const existing = Array.isArray(decisionDraft) ? decisionDraft.map(i => i.text).join('; ') : '';
+        const fullLog = getFullThreadLog(task.id);
+        const savedOptions = task.decisionOptions ? `\nPreviously saved options:\n${task.decisionOptions}` : '';
         const aiText = await callAI(
-          [{ role: 'user', content: `Task: "${task.title}"\nStatus: ${task.status}\nNotes: ${task.notes||'None'}\nDecision Question: ${task.decisionQuestion||'Not specified'}\nAlready suggested: ${existing}\nRecent thread:\n${getThreadLog(task.id)}` }],
-          `You are OpsLog AI. Suggest 2–3 ADDITIONAL decision options that are different from the ones already listed. Format as a numbered list. One line per option. No preamble — start directly with "1.".`
+          [{ role: 'user', content: `Task: "${task.title}"\nStatus: ${task.status}\nNotes: ${task.notes||'None'}\nDecision Question: ${task.decisionQuestion||'Not specified'}${savedOptions}\nAlready suggested in this session: ${existing}\n\nFull thread history:\n${fullLog}` }],
+          `You are OpsLog AI. Suggest 2–3 ADDITIONAL decision options that are different from both the ones already suggested in this session AND any previously saved options. Base them on the task's current state as reflected in the thread history. Format as a numbered list. One line per option. No preamble — start directly with "1.".`
         );
         const clean = aiText.replace(/ACTION:\{[\s\S]*?\}(?:\s*$)/m, '').trim();
         const newItems = clean.split('\n').filter(l => l.trim()).map(l => ({ text: l.replace(/^\d+\.\s*/, '').trim(), checked: true }));
