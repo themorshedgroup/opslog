@@ -184,14 +184,14 @@
     .agenda-banner { background: #fff8e7; border-color: #f59e0b; color: #b45309; }
     html.dark .agenda-banner { background: #2d1f00; border-color: #f59e0b; color: #fcd34d; }
     .update-banner { background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; padding: 7px 12px; margin-bottom: 8px; font-size: 12px; color: #10b981; font-weight: 600; text-align: center; }
-    .update-tag { background: rgba(16,185,129,0.15); color: #10b981; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
-    .update-ai-tag { background: rgba(59,130,246,0.15); color: #3b82f6; font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
+    .update-tag { background: rgba(16,185,129,0.18); color: #10b981; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
+    .update-ai-tag { background: rgba(59,130,246,0.18); color: #3b82f6; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
     .thread-copy-btn { margin-top: 6px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 11px; cursor: pointer; transition: all 0.15s; display: inline-block; }
     .thread-copy-btn:hover { background: var(--surface2); }
     /* Thread card footer */
     .thread-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
-    .gmail-card-btn { background: none; border: none; font-size: 16px; cursor: pointer; padding: 2px 4px; border-radius: 6px; line-height: 1; opacity: 0.7; transition: opacity 0.15s; }
-    .gmail-card-btn:hover { opacity: 1; }
+    .gmail-card-btn { background: none; border: none; cursor: pointer; padding: 2px 3px; border-radius: 4px; line-height: 1; display: inline-flex; align-items: center; transition: opacity 0.15s; }
+    .gmail-card-btn:hover { opacity: 0.8; }
     /* Gmail button in chat */
     .gmail-chat-btn { margin-top: 6px; padding: 5px 12px; border-radius: 8px; border: 1px solid #ea4335; background: none; color: #ea4335; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s; display: inline-block; }
     .gmail-chat-btn:hover { background: rgba(234,67,53,0.08); }
@@ -228,7 +228,7 @@
     .decision-checkbox-item input[type="checkbox"] { margin-top: 2px; accent-color: #8b5cf6; width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
     .update-text { font-size: 14px; line-height: 1.4; }
     .update-meta { font-size: 11px; color: var(--text2); margin-top: 4px; }
-    .update-eod-tag { background: var(--eod-bg); color: var(--eod-color); font-size: 10px; font-weight: 700; padding: 1px 5px; border-radius: 4px; margin-left: 4px; }
+    .update-eod-tag { background: var(--eod-bg); color: var(--eod-color); font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
     .thread-input-row { display: flex; gap: 8px; align-items: flex-end; }
     .thread-textarea { flex: 1; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; resize: none; min-height: 42px; max-height: 200px; overflow-y: auto; font-family: inherit; outline: none; }
     .thread-textarea:focus { border-color: var(--accent); }
@@ -325,7 +325,7 @@
 
   const fmtTime = (iso) => {
     if (!iso) return '';
-    return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+    return new Date(iso).toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   };
 
   const timeAgo = (iso) => {
@@ -1360,7 +1360,7 @@ If NO task matches:
                     {fmtTime(m.timestamp)}
                     {m.source === 'eod'    && <span className="update-eod-tag">EOD</span>}
                     {m.source === 'update' && <span className="update-tag">UPDATE</span>}
-                    {m.source === 'ai'     && <span className="update-ai-tag">AI</span>}
+                    {m.source === 'ai'     && <span className="update-ai-tag">AI ASSIST</span>}
                     {m.source === 'agenda' && <span className="update-tag" style={{background:'#fff8e7',color:'#b45309',borderColor:'#f59e0b'}}>AGENDA</span>}
                   </div>
                   {m.source === 'ai' && (
@@ -1448,15 +1448,23 @@ If NO task matches:
                     {isOverdue(task.dueDate, task.status) && ' · ⚠️ Overdue'}
                   </div>
                   <div className="thread-card-footer">
-                    <span className="thread-update-chip">🧵 {updates} update{updates !== 1 ? 's' : ''}</span>
-                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+                      <span className="thread-update-chip">🧵 {updates} update{updates !== 1 ? 's' : ''}</span>
                       {task.email && (
                         <button className="gmail-card-btn"
                           onClick={e => { e.stopPropagation(); window.open(task.email, '_blank'); }}
-                          title="Open email link">📧</button>
+                          title="Open in Gmail">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="16" height="16">
+                            <path fill="#4caf50" d="M45,16.2l-5,2.75l-5,4.75L35,40h7c1.657,0,3-1.343,3-3V16.2z"/>
+                            <path fill="#1e88e5" d="M3,16.2l3.614,1.71L13,23.7V40H6c-1.657,0-3-1.343-3-3V16.2z"/>
+                            <polygon fill="#e53935" points="35,11.2 24,19.45 13,11.2 12,17 13,23.7 24,31.95 35,23.7 36,17"/>
+                            <path fill="#c62828" d="M3,12.298V16.2l10,7.5V11.2L9.876,8.859C9.132,8.301,8.228,8,7.298,8h0C4.924,8,3,9.924,3,12.298z"/>
+                            <path fill="#fbc02d" d="M45,12.298V16.2l-10,7.5V11.2l3.124-2.341C38.868,8.301,39.772,8,40.702,8h0 C43.076,8,45,9.924,45,12.298z"/>
+                          </svg>
+                        </button>
                       )}
-                      {lastTs && <span className="thread-last-update">{timeAgo(lastTs)}</span>}
                     </div>
+                    {lastTs && <span className="thread-last-update">{timeAgo(lastTs)}</span>}
                   </div>
                 </div>
               );
