@@ -32,7 +32,7 @@
     }
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
     body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-    .app { max-width: 500px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
+    .app { max-width: 680px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
 
     /* Header */
     .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 100; }
@@ -40,7 +40,7 @@
     .notif-badge { background: var(--danger); color: white; border-radius: 10px; font-size: 11px; font-weight: 700; padding: 2px 6px; min-width: 18px; text-align: center; }
 
     /* Tabbar — fixed bottom, BrainDump style */
-    .tabbar { display: flex; border-top: 1px solid var(--border); background: var(--bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 500px; z-index: 99; padding-bottom: calc(env(safe-area-inset-bottom) + 4px); }
+    .tabbar { display: flex; border-top: 1px solid var(--border); background: var(--bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 680px; z-index: 99; padding-bottom: calc(env(safe-area-inset-bottom) + 4px); }
     .tabbar button { flex: 1; padding: 8px 0 4px; border: none; background: none; color: var(--text2); font-size: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; transition: all 0.15s; position: relative; }
     .tabbar button.active { color: var(--accent); }
     .tab-icon { font-size: 22px; line-height: 1; position: relative; width: 44px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 12px; transition: all 0.2s ease; }
@@ -70,6 +70,7 @@
     .pill { padding: 6px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.12s; }
     .pill:active { transform: scale(0.94); }
     .pill.eod-pill { background: var(--eod-color); color: white; border-color: var(--eod-color); }
+    .pill.eod-symon-pill { background: #6d28d9; border-color: #6d28d9; }
     .chat-row { display: flex; gap: 8px; align-items: flex-end; }
     .chat-textarea { flex: 1; padding: 10px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; resize: none; min-height: 42px; max-height: 240px; overflow-y: auto; outline: none; font-family: inherit; line-height: 1.4; transition: border-color 0.15s; }
     .chat-textarea:focus { border-color: var(--accent); }
@@ -117,7 +118,7 @@
 
     /* Modal */
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
-    .modal { background: var(--bg); border-radius: 20px 20px 0 0; padding: 20px 20px 40px; width: 100%; max-width: 500px; max-height: 90vh; overflow-y: auto; }
+    .modal { background: var(--bg); border-radius: 20px 20px 0 0; padding: 20px 20px 40px; width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto; }
     .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 18px; }
     .modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
     .modal-hdr-title { font-size: 17px; font-weight: 700; }
@@ -439,6 +440,14 @@
             <textarea className="form-ta" value={form.decisionOptions || ''} onChange={set('decisionOptions')} placeholder="What are the options? (or use ✨ AI Suggest in Threads)"/>
           </div>
           <div className="form-group">
+            <label className="form-lbl">Decision Maker</label>
+            <select className="form-sel" value={form.decisionMaker || ''} onChange={set('decisionMaker')}>
+              <option value="">— None —</option>
+              <option value="tarek">Tarek</option>
+              <option value="symon">Symon</option>
+            </select>
+          </div>
+          <div className="form-group">
             <label className="form-lbl">Email Link</label>
             <input className="form-inp" type="url" value={form.email || ''} onChange={set('email')} placeholder="https://..."/>
           </div>
@@ -665,7 +674,7 @@ ACTION:{"type":"TYPE","payload":{...}}
         const { type, payload } = JSON.parse(match[1]);
         if (type === 'ADD') {
           const id = uid();
-          nextTasks[id] = { id, title: payload.title, category: payload.category || categories[0]?.id || 'todo', dueDate: payload.dueDate, notes: payload.notes||'', status: payload.status||'open', decisionQuestion: payload.decisionQuestion||'', decisionOptions: payload.decisionOptions||'', email: payload.email||'', createdAt: now(), updatedAt: now() };
+          nextTasks[id] = { id, title: payload.title, category: payload.category || categories[0]?.id || 'todo', dueDate: payload.dueDate, notes: payload.notes||'', status: payload.status||'open', decisionQuestion: payload.decisionQuestion||'', decisionOptions: payload.decisionOptions||'', decisionMaker: payload.decisionMaker||'', email: payload.email||'', createdAt: now(), updatedAt: now() };
           if (!nextThreads[id]) nextThreads[id] = { messages: [] };
         } else if (type === 'EDIT') {
           if (nextTasks[payload.id]) nextTasks[payload.id] = { ...nextTasks[payload.id], ...payload.changes, updatedAt: now() };
@@ -707,22 +716,23 @@ ACTION:{"type":"TYPE","payload":{...}}
     };
 
     // ── EOD
-    const startEod = async () => {
+    const startEod = async (target) => {
       if (aiLoading) return;
       const openTasks = Object.values(tasks).filter(t => t.status !== 'done');
       if (!openTasks.length) { setChatHistory(prev => [...prev, { role: 'assistant', content: 'No open tasks.', _show: 'No open tasks to review right now.' }]); return; }
-      setChatHistory(prev => [...prev, { role: 'user', content: 'Generate EOD', _show: '📊 Generate EOD' }]);
+      const label = target === 'tarek' ? 'EOD: Symon → Tarek' : 'EOD: Symon';
+      setChatHistory(prev => [...prev, { role: 'user', content: label, _show: `📊 ${label}` }]);
       setAiLoading(true);
       try {
         const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
         const taskLines = openTasks.map((t, i) =>
-          `${i+1}. **${t.title}** (Due: ${fmtDate(t.dueDate)||'No date'} · Status: ${t.status} · Column: ${getCatLabel(t.category)})${t.decisionQuestion ? `\n   Decision Question: ${t.decisionQuestion}` : ''}${t.decisionOptions ? `\n   Options: ${t.decisionOptions}` : ''}\n   Thread log: ${getThreadLog(t.id)}`
+          `${i+1}. **${t.title}** (Due: ${fmtDate(t.dueDate)||'No date'} · Status: ${t.status} · Category: ${getCatLabel(t.category)})${t.decisionQuestion ? `\n   Decision Question: ${t.decisionQuestion}` : ''}${t.decisionOptions ? `\n   Options: ${t.decisionOptions}` : ''}\n   Thread log: ${getThreadLog(t.id)}`
         ).join('\n\n');
         const aiText = await callAI(
           [{ role: 'user', content: `Today is ${today}. Ask Symon for a brief status update on each open task. Number each question. Tell him to reply with numbered answers.\n\nOpen tasks:\n${taskLines}` }],
           `You are OpsLog AI conducting an EOD check-in. Ask concise numbered questions about each task's status. Be professional and brief.`
         );
-        setEodState({ tasks: openTasks, step: 'asked' });
+        setEodState({ tasks: openTasks, step: 'asked', target });
         setChatHistory(prev => [...prev, { role: 'assistant', content: aiText, _show: aiText }]);
       } catch (e) {
         setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
@@ -750,46 +760,49 @@ ACTION:{"type":"TYPE","payload":{...}}
         const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
         const todayStr = new Date().toISOString().slice(0, 10);
 
+        const target = eodState.target;
+        const targetLabel = target === 'tarek' ? 'Tarek (CEO)' : 'Symon (Operations Manager)';
+
         // SECTION 1 — Accomplishments: done tasks created/updated today
         const todayDone = Object.values(tasks).filter(t =>
           t.status === 'done' &&
           (t.updatedAt?.slice(0,10) === todayStr || t.createdAt?.slice(0,10) === todayStr)
         );
         const accomplishLines = todayDone.length
-          ? todayDone.map(t => `- ${t.title}${t.notes ? ': ' + t.notes : ''}`).join('\n')
-          : null;
+          ? todayDone.map(t => `• ${t.title}${t.notes ? ' — ' + t.notes : ''}`).join('\n')
+          : 'None';
 
-        // SECTION 2 — Task Updates: all open tasks, user update or current status
+        // SECTION 2 — Task Updates: all open tasks, bold title
         const taskUpdateLines = eodTasks.map((t, i) => {
           const upd = numbered[i + 1];
-          return `- ${t.title}${t.dueDate ? ' (Due: ' + fmtDate(t.dueDate) + ')' : ''}: ${upd || t.notes || t.status}`;
+          return `• **${t.title}** — ${upd || t.notes || t.status}`;
         }).join('\n');
 
-        // SECTION 3 — Decisions: all open tasks with a decisionQuestion
-        const decisionTasks = Object.values(tasks).filter(t => t.status !== 'done' && t.decisionQuestion);
+        // SECTION 3 — Decisions: open tasks with decisionQuestion + decisionOptions filtered by target decision maker
+        const decisionTasks = Object.values(tasks).filter(t =>
+          t.status !== 'done' && t.decisionQuestion && t.decisionOptions && t.decisionMaker === target
+        );
         const decisionLines = decisionTasks.length
-          ? decisionTasks.map((t, di) => {
-              let line = `${di + 1}. ${t.decisionQuestion}`;
-              if (t.decisionOptions) {
-                const opts = t.decisionOptions.split('\n')
-                  .map(o => o.replace(/^\d+[.)]\s*/, '').trim()).filter(Boolean);
-                'ABCDE'.split('').slice(0, opts.length).forEach((ltr, j) => {
-                  line += `\n   ${ltr}. ${opts[j]}`;
-                });
-              }
+          ? decisionTasks.map((t) => {
+              let line = `• **${t.title}** — ${t.decisionQuestion}`;
+              const opts = t.decisionOptions.split('\n')
+                .map(o => o.replace(/^\d+[.)]\s*/, '').trim()).filter(Boolean);
+              'ABCDE'.split('').slice(0, opts.length).forEach((ltr, j) => {
+                line += `\n   ${ltr}. ${opts[j]}`;
+              });
               return line;
-            }).join('\n\n')
+            }).join('\n')
           : null;
 
         const promptParts = [
-          accomplishLines ? `ACCOMPLISHMENTS (completed today):\n${accomplishLines}` : null,
-          `OPEN TASK UPDATES:\n${taskUpdateLines}`,
-          decisionLines ? `DECISIONS REQUIRED:\n${decisionLines}` : null,
+          `**Accomplishments**\n${accomplishLines}`,
+          `**Task Updates**\n${taskUpdateLines}`,
+          decisionLines ? `**Decisions Required**\n${decisionLines}` : null,
         ].filter(Boolean).join('\n\n');
 
         const summary = await callAI(
-          [{ role: 'user', content: `Date: ${today}\n\n${promptParts}\n\nWrite a clean EOD summary for Tarek (CEO) using these sections:\n**Accomplishments** (only if present above)\n**Task Updates** (one bullet per task)\n**Decisions Required** (keep numbered questions + A/B/C options; only if present above)\n\nStart with "EOD Update — ${today}". No greetings, no closing lines. Be concise.` }],
-          `You are OpsLog AI writing an EOD for a CEO. Preserve the Decisions A/B/C format exactly. Be brief.`
+          [{ role: 'user', content: `Date: ${today}\nFor: ${targetLabel}\n\n${promptParts}\n\nFormat exactly as shown — keep bold titles (**title**), bullet points (•), and A/B/C options. Start with "EOD Update — ${today}". No greetings, no closing lines.` }],
+          `You are OpsLog AI. Reproduce the EOD sections exactly as given. Preserve bold formatting, bullet points, and A/B/C decision options. Be concise.`
         );
 
         setNotifications(prev => [{ id: uid(), content: summary, timestamp: now(), read: false }, ...prev]);
@@ -1054,7 +1067,7 @@ If NO task matches:
       setTasks(nextTasks); setThreads(nextThreads); setEditTask(null);
     };
 
-    const newTaskTemplate = () => ({ id: uid(), title: '', category: categories[0]?.id||'todo', dueDate: '', notes: '', status: 'open', decisionQuestion: '', decisionOptions: '', email: '', _exists: false });
+    const newTaskTemplate = () => ({ id: uid(), title: '', category: categories[0]?.id||'todo', dueDate: '', notes: '', status: 'open', decisionQuestion: '', decisionOptions: '', decisionMaker: '', email: '', _exists: false });
 
     // ── Thread updates
     const addUpdate = (taskId, content) => {
@@ -1152,14 +1165,15 @@ If NO task matches:
         </div>
         <div className="chat-input-area">
           {agendaState?.step === 'asked' && <div className="eod-banner agenda-banner">📋 Agenda active — reply with numbered answers (1. ... 2. ...)</div>}
-          {eodState?.step === 'asked' && <div className="eod-banner">📊 EOD Mode — reply with numbered answers (1. ... 2. ...)</div>}
+          {eodState?.step === 'asked' && <div className="eod-banner">📊 {eodState.target === 'tarek' ? 'EOD: Symon → Tarek' : 'EOD: Symon'} — reply with numbered answers (1. ... 2. ...)</div>}
           {updateTaskState?.step === 'picking' && <div className="update-banner">✏️ Update Mode — reply with the number of the thread to update</div>}
           <div className="pills">
             <button className="pill accomplish-pill" onClick={() => setChatInput('Accomplishment: ')}>🏆 Accomplishments</button>
             <button className="pill" onClick={() => setChatInput('Add task: ')}>＋ Add Task</button>
             <button className="pill" onClick={() => setChatInput('Update task: ')}>✏️ Update Task</button>
             <button className="pill agenda-pill" onClick={startAgenda} disabled={aiLoading}>📋 Agenda</button>
-            <button className="pill eod-pill" onClick={startEod} disabled={aiLoading}>📊 Generate EOD</button>
+            <button className="pill eod-pill" onClick={() => startEod('tarek')} disabled={aiLoading}>📊 EOD: Symon → Tarek</button>
+            <button className="pill eod-pill eod-symon-pill" onClick={() => startEod('symon')} disabled={aiLoading}>📊 EOD: Symon</button>
             <button className="pill" onClick={() => { if (window.confirm('Clear chat history?')) setChatHistory([]); }}>🗑️ Clear Chat</button>
           </div>
           <div className="chat-row">
