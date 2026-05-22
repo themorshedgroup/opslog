@@ -1,1804 +1,389 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>TMG Ops Log</title>
-  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <style>
-    :root {
-      --bg: #ffffff;
-      --surface: #f5f5f7;
-      --surface2: #e8e8ed;
-      --border: #d8d8dc;
-      --text: #1a1a1a;
-      --text2: #6e6e73;
-      --accent: #0071e3;
-      --danger: #ef4444;
-      --eod-color: #8b5cf6;
-      --eod-bg: #f5f0ff;
-    }
-    html.dark {
-      --bg: #111111;
-      --surface: #1c1c1e;
-      --surface2: #2c2c2e;
-      --border: #3a3a3c;
-      --text: #f5f5f7;
-      --text2: #8e8e93;
-      --accent: #409cff;
-      --eod-bg: #1e0f3d;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
-    .app { max-width: 680px; margin: 0 auto; min-height: 100vh; display: flex; flex-direction: column; }
-
-    /* Header */
-    .header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg); position: sticky; top: 0; z-index: 100; }
-    .header h1 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
-    .notif-badge { background: var(--danger); color: white; border-radius: 10px; font-size: 11px; font-weight: 700; padding: 2px 6px; min-width: 18px; text-align: center; }
-
-    /* Tabbar — fixed bottom, BrainDump style */
-    .tabbar { display: flex; border-top: 1px solid var(--border); background: var(--bg); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); position: fixed; bottom: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 680px; z-index: 99; padding-bottom: calc(env(safe-area-inset-bottom) + 4px); }
-    .tabbar button { flex: 1; padding: 8px 0 4px; border: none; background: none; color: var(--text2); font-size: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; transition: all 0.15s; position: relative; }
-    .tabbar button.active { color: var(--accent); }
-    .tab-icon { font-size: 22px; line-height: 1; position: relative; width: 44px; height: 36px; display: flex; align-items: center; justify-content: center; border-radius: 12px; transition: all 0.2s ease; }
-    .tabbar button.active .tab-icon { background: linear-gradient(135deg, #a855f7, #3b82f6); box-shadow: 0 2px 12px rgba(168, 85, 247, 0.35); }
-    .tabbar button:not(.active) .tab-icon { filter: grayscale(1); opacity: 0.5; }
-    .tab-label { font-weight: 500; font-size: 10px; }
-    .tab-dot { position: absolute; top: 2px; right: 4px; background: var(--danger); color: white; border-radius: 8px; font-size: 9px; font-weight: 700; padding: 1px 4px; min-width: 14px; text-align: center; line-height: 1.4; }
-
-    /* Content */
-    .content { flex: 1; overflow-y: auto; padding-bottom: calc(env(safe-area-inset-bottom) + 68px); }
-
-    /* No-key banner */
-    .no-key-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: 10px; margin: 14px; padding: 12px 14px; font-size: 13px; color: #856404; line-height: 1.4; }
-    html.dark .no-key-banner { background: #2d2200; border-color: #b08000; color: #ffd966; }
-    .no-key-banner strong { font-weight: 700; }
-
-    /* Chat */
-    .chat-wrap { display: flex; flex-direction: column; height: calc(100vh - 49px - 68px - env(safe-area-inset-bottom)); }
-    .chat-messages { flex: 1; overflow-y: auto; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px; }
-    .chat-msg { max-width: 88%; padding: 10px 13px; border-radius: 16px; font-size: 14px; line-height: 1.45; }
-    .chat-msg.user { background: var(--accent); color: white; align-self: flex-end; border-radius: 16px 16px 3px 16px; }
-    .chat-msg.ai { background: var(--surface); color: var(--text); align-self: flex-start; border-radius: 16px 16px 16px 3px; }
-    .chat-msg.sys { background: var(--surface2); color: var(--text2); align-self: center; font-size: 12px; border-radius: 8px; padding: 7px 12px; max-width: 100%; text-align: center; }
-    .chat-input-area { background: var(--bg); border-top: 1px solid var(--border); padding: 10px 14px 14px; flex-shrink: 0; }
-    .eod-banner { background: var(--eod-bg); border: 1px solid var(--eod-color); border-radius: 8px; padding: 7px 12px; margin-bottom: 8px; font-size: 12px; color: var(--eod-color); font-weight: 600; text-align: center; }
-    .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 9px; }
-    .pill { padding: 6px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.12s; }
-    .pill:active { transform: scale(0.94); }
-    .pill.eod-pill { background: var(--eod-color); color: white; border-color: var(--eod-color); }
-    .pill.eod-symon-pill { background: #6d28d9; border-color: #6d28d9; }
-    .chat-row { display: flex; gap: 8px; align-items: flex-end; }
-    .chat-textarea { flex: 1; padding: 10px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; resize: none; min-height: 42px; max-height: 240px; overflow-y: auto; outline: none; font-family: inherit; line-height: 1.4; transition: border-color 0.15s; }
-    .chat-textarea:focus { border-color: var(--accent); }
-    .send-btn { width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--accent); color: white; font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: opacity 0.15s; }
-    .send-btn:disabled { opacity: 0.4; cursor: default; }
-    .typing-dots { display: flex; gap: 4px; padding: 4px 2px; align-items: center; }
-    .typing-dots span { width: 7px; height: 7px; background: var(--text2); border-radius: 50%; animation: bounce 1.2s ease-in-out infinite; }
-    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
-    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes bounce { 0%,60%,100% { transform:translateY(0); } 30% { transform:translateY(-7px); } }
-
-    /* Board */
-    .board { padding: 12px 14px; display: flex; flex-direction: column; gap: 12px; }
-    .board-toolbar { display: flex; gap: 8px; }
-    .board-add-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border-radius: 10px; border: 1.5px dashed var(--border); background: none; color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer; }
-    .board-add-btn:hover { border-color: var(--accent); color: var(--accent); }
-    .board-settings-btn { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .board-settings-btn:hover { color: var(--accent); border-color: var(--accent); }
-    .column { border-radius: 12px; border: 1px solid var(--border); overflow: hidden; }
-    .col-header { padding: 11px 14px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: var(--surface); border-left: 4px solid transparent; }
-    .col-header-left { display: flex; align-items: center; gap: 8px; }
-    .col-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-    .col-label { font-weight: 600; font-size: 13px; }
-    .col-count { background: var(--surface2); border-radius: 10px; padding: 1px 7px; font-size: 12px; font-weight: 600; color: var(--text2); }
-    .col-chevron { font-size: 11px; color: var(--text2); }
-    .task-list { padding: 8px; display: flex; flex-direction: column; gap: 6px; background: var(--bg); }
-    .task-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; cursor: pointer; transition: transform 0.1s; }
-    .task-card:active { transform: scale(0.98); }
-    .task-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
-    .task-title { font-size: 14px; font-weight: 500; line-height: 1.3; }
-    .task-meta { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-    .due-badge { font-size: 11px; color: var(--text2); }
-    .due-badge.overdue { color: var(--danger); font-weight: 600; }
-    /* Status chips */
-    .status-chip { font-size: 10px; font-weight: 700; padding: 2px 8px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.3px; flex-shrink: 0; white-space: nowrap; }
-    .status-chip.open       { background: #dbeafe; color: #1d4ed8; }
-    .status-chip.in-progress { background: #fef3c7; color: #b45309; }
-    .status-chip.decision   { background: #f5f0ff; color: #7c3aed; }
-    .status-chip.done       { background: #d1fae5; color: #065f46; }
-    html.dark .status-chip.open       { background: #1e3a5f; color: #93c5fd; }
-    html.dark .status-chip.in-progress { background: #2d1f00; color: #fcd34d; }
-    html.dark .status-chip.decision   { background: #1e0f3d; color: #c4b5fd; }
-    html.dark .status-chip.done       { background: #052e16; color: #6ee7b7; }
-    .col-empty { padding: 14px; text-align: center; color: var(--text2); font-size: 13px; background: var(--bg); }
-
-    /* Modal */
-    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 200; display: flex; align-items: flex-end; justify-content: center; }
-    .modal { background: var(--bg); border-radius: 20px 20px 0 0; padding: 20px 20px 40px; width: 100%; max-width: 680px; max-height: 90vh; overflow-y: auto; }
-    .modal-handle { width: 36px; height: 4px; background: var(--border); border-radius: 2px; margin: 0 auto 18px; }
-    .modal-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; }
-    .modal-hdr-title { font-size: 17px; font-weight: 700; }
-    .icon-btn { width: 30px; height: 30px; border-radius: 50%; border: none; background: var(--surface2); color: var(--text); font-size: 17px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-    .form-group { margin-bottom: 14px; }
-    .form-lbl { font-size: 12px; font-weight: 600; color: var(--text2); display: block; margin-bottom: 5px; }
-    .form-inp, .form-sel, .form-ta { width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; font-family: inherit; outline: none; transition: border-color 0.15s; }
-    .form-inp:focus, .form-sel:focus, .form-ta:focus { border-color: var(--accent); }
-    .form-ta { resize: vertical; min-height: 80px; line-height: 1.4; }
-    .btn { padding: 11px 18px; border-radius: 10px; border: none; font-size: 14px; font-weight: 600; cursor: pointer; transition: opacity 0.15s; }
-    .btn:disabled { opacity: 0.5; cursor: default; }
-    .btn-primary { background: var(--accent); color: white; }
-    .btn-danger { background: var(--danger); color: white; }
-    .btn-ghost { background: var(--surface2); color: var(--text); }
-    .btn-row { display: flex; gap: 8px; margin-top: 8px; }
-    .btn-row .btn { flex: 1; }
-
-    /* Category settings */
-    .cat-row { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; background: var(--surface); border-radius: 12px; margin-bottom: 8px; border: 1px solid var(--border); }
-    .cat-row-top { display: flex; gap: 8px; align-items: center; }
-    .cat-color-preview { width: 28px; height: 28px; border-radius: 8px; flex-shrink: 0; border: 2px solid rgba(0,0,0,0.1); }
-    .cat-name-inp { flex: 1; padding: 7px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 14px; font-weight: 600; font-family: inherit; outline: none; }
-    .cat-name-inp:focus { border-color: var(--accent); }
-    .cat-delete-btn { width: 28px; height: 28px; border-radius: 8px; border: none; background: none; color: var(--text2); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .cat-delete-btn:hover { background: #fee2e2; color: var(--danger); }
-    .color-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
-    .color-swatch { width: 24px; height: 24px; border-radius: 6px; border: 2px solid transparent; cursor: pointer; transition: transform 0.1s; flex-shrink: 0; }
-    .color-swatch:hover { transform: scale(1.15); }
-    .color-swatch.selected { border-color: var(--text); transform: scale(1.1); }
-    .add-cat-btn { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 10px; border-radius: 10px; border: 1.5px dashed var(--border); background: none; color: var(--text2); font-size: 13px; font-weight: 500; cursor: pointer; width: 100%; margin-bottom: 14px; }
-    .add-cat-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-    /* Threads */
-    .threads-list { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
-    .thread-card { background: var(--surface); border-radius: 12px; padding: 13px 14px; border: 1px solid var(--border); cursor: pointer; transition: transform 0.1s; }
-    .thread-card:active { transform: scale(0.98); }
-    .thread-card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; margin-bottom: 5px; }
-    .thread-card-title { font-size: 14px; font-weight: 600; line-height: 1.3; }
-    .thread-card-meta { font-size: 12px; color: var(--text2); margin-bottom: 5px; }
-    .thread-update-chip { display: inline-flex; align-items: center; gap: 3px; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; background: var(--surface2); color: var(--text2); }
-    .thread-sort-bar { display: flex; align-items: center; gap: 6px; padding: 10px 14px 6px; flex-wrap: wrap; }
-    .thread-sort-label { font-size: 11px; color: var(--text2); font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-right: 2px; }
-    .thread-sort-btn { font-size: 12px; padding: 4px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-    .thread-sort-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1a1a; font-weight: 600; }
-    .thread-last-update { font-size: 11px; color: var(--text2); opacity: 0.8; }
-    .thread-view-wrap { display: flex; flex-direction: column; height: calc(100vh - 49px - 68px - env(safe-area-inset-bottom)); padding: 0; }
-    .thread-scrollable { flex: 1; overflow-y: auto; padding: 0 14px; }
-    .thread-view-hdr { padding: 12px 14px; border-bottom: 1px solid var(--border); margin-bottom: 14px; display: flex; align-items: center; gap: 10px; position: sticky; top: 0; z-index: 10; background: var(--bg); margin-left: -14px; margin-right: -14px; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
-    .thread-bottom { flex-shrink: 0; background: var(--bg); border-top: 1px solid var(--border); padding: 10px 14px 14px; }
-    .thread-mode-label { text-align: center; font-size: 11px; color: var(--text2); margin-top: 6px; opacity: 0.75; letter-spacing: 0.3px; }
-    .back-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: var(--surface); color: var(--text); font-size: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .thread-view-info { flex: 1; }
-    .thread-view-title { font-size: 15px; font-weight: 700; margin-bottom: 2px; }
-    .thread-view-sub { font-size: 12px; color: var(--text2); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-    .updates-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
-    .update-entry { background: var(--surface); border-radius: 10px; padding: 10px 12px; border-left: none; border-right: 3px solid #9ca3af; }
-    .update-entry.eod-source    { border-right: none; border-left: 3px solid var(--eod-color); }
-    .update-entry.update-source { border-right: none; border-left: 3px solid #10b981; }
-    .update-entry.ai-source     { border-right: none; border-left: 3px solid #3b82f6; }
-    .update-entry.agenda-source { border-right: none; border-left: 3px solid #f59e0b; }
-    .agenda-pill { background: #f59e0b22; border-color: #f59e0b; color: #f59e0b; }
-    .accomplish-pill { background: #10b98122; border-color: #10b981; color: #10b981; }
-    .agenda-banner { background: #fff8e7; border-color: #f59e0b; color: #b45309; }
-    html.dark .agenda-banner { background: #2d1f00; border-color: #f59e0b; color: #fcd34d; }
-    .update-banner { background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; padding: 7px 12px; margin-bottom: 8px; font-size: 12px; color: #10b981; font-weight: 600; text-align: center; }
-    .update-tag { background: rgba(16,185,129,0.18); color: #10b981; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
-    .update-ai-tag { background: rgba(59,130,246,0.18); color: #3b82f6; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
-    .thread-copy-btn { margin-top: 6px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 11px; cursor: pointer; transition: all 0.15s; display: inline-block; }
-    .thread-copy-btn:hover { background: var(--surface2); }
-    /* Thread card footer */
-    .thread-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
-    .gmail-card-btn { background: none; border: none; cursor: pointer; padding: 2px 3px; border-radius: 4px; line-height: 1; display: inline-flex; align-items: center; transition: opacity 0.15s; }
-    .gmail-card-btn:hover { opacity: 0.8; }
-    /* Gmail button in chat */
-    .gmail-chat-btn { margin-top: 6px; padding: 5px 12px; border-radius: 8px; border: 1px solid #ea4335; background: none; color: #ea4335; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s; display: inline-block; }
-    .gmail-chat-btn:hover { background: rgba(234,67,53,0.08); }
-    /* Thread mode toggle */
-    .thread-mode-row { display: flex; gap: 6px; margin-bottom: 8px; }
-    .thread-mode-btn { flex: 1; padding: 7px 0; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
-    .thread-mode-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1a1a; }
-
-    /* Thread overview summary */
-    .thread-summary-block { background: var(--surface); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; border: 1px solid var(--border); }
-    .thread-summary-hdr { font-size: 12px; font-weight: 700; color: var(--text2); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 7px; display: flex; align-items: center; justify-content: space-between; }
-    .thread-summary-text { font-size: 13px; line-height: 1.55; }
-    .thread-summary-empty { font-size: 12px; color: var(--text2); font-style: italic; }
-    .refresh-btn { padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 11px; font-weight: 500; cursor: pointer; transition: color 0.15s; }
-    .refresh-btn:hover { color: var(--accent); border-color: var(--accent); }
-    .refresh-btn:disabled { opacity: 0.5; cursor: default; }
-
-    /* Decision Block */
-    .decision-block { background: #f5f0ff; border: 1px solid #8b5cf6; border-radius: 12px; padding: 13px 14px; margin-bottom: 14px; }
-    html.dark .decision-block { background: #1e0f3d; border-color: #7c3aed; }
-    .decision-block-hdr { font-size: 12px; font-weight: 700; color: #8b5cf6; margin-bottom: 9px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
-    .decision-question { font-size: 14px; font-weight: 600; line-height: 1.4; margin-bottom: 6px; }
-    .decision-options { font-size: 13px; color: var(--text2); line-height: 1.55; white-space: pre-wrap; }
-    .decision-empty { font-size: 12px; color: var(--text2); font-style: italic; }
-    .decision-suggest-btn { padding: 5px 11px; border-radius: 8px; border: 1px solid #8b5cf6; background: none; color: #8b5cf6; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; flex-shrink: 0; transition: background 0.15s; }
-    .decision-suggest-btn:hover { background: rgba(139,92,246,0.08); }
-    .decision-suggest-btn:disabled { opacity: 0.5; cursor: default; }
-    .decision-draft-area { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid #8b5cf6; background: var(--bg); color: var(--text); font-size: 13px; resize: vertical; min-height: 72px; font-family: inherit; outline: none; margin-top: 8px; line-height: 1.4; }
-    .decision-draft-btns { display: flex; gap: 8px; margin-top: 8px; }
-    .decision-draft-save { padding: 6px 14px; border-radius: 8px; border: none; background: #8b5cf6; color: white; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .decision-draft-cancel { padding: 6px 12px; border-radius: 8px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 13px; cursor: pointer; }
-    .decision-checkbox-list { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
-    .decision-checkbox-item { display: flex; align-items: flex-start; gap: 9px; cursor: pointer; font-size: 13px; line-height: 1.45; }
-    .decision-checkbox-item input[type="checkbox"] { margin-top: 2px; accent-color: #8b5cf6; width: 15px; height: 15px; flex-shrink: 0; cursor: pointer; }
-    .update-text { font-size: 14px; line-height: 1.4; }
-    .update-meta { font-size: 11px; color: var(--text2); margin-top: 4px; }
-    .update-eod-tag { background: var(--eod-bg); color: var(--eod-color); font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
-    .thread-input-row { display: flex; gap: 8px; align-items: flex-end; }
-    .thread-textarea { flex: 1; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 14px; resize: none; min-height: 42px; max-height: 200px; overflow-y: auto; font-family: inherit; outline: none; }
-    .thread-textarea:focus { border-color: var(--accent); }
-    .thread-empty { text-align: center; color: var(--text2); font-size: 13px; padding: 30px 16px; }
-
-    /* Notifications */
-    .notifs-wrap { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
-    .notif-card { background: var(--surface); border-radius: 12px; padding: 14px; border: 1px solid var(--border); transition: opacity 0.3s; }
-    .notif-card.is-read { opacity: 0.45; }
-    .notif-time { font-size: 12px; color: var(--text2); margin-bottom: 9px; font-weight: 500; }
-    .notif-body { font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
-    .notif-actions { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
-    .notif-action-btn { padding: 6px 13px; border-radius: 8px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; }
-    .notif-action-btn.copy-btn { background: var(--accent); color: white; border-color: var(--accent); }
-    .notif-action-btn.copied { background: #10b981; border-color: #10b981; color: white; }
-    .clear-all-btn { display: block; width: 100%; padding: 10px; border-radius: 10px; border: 1px solid var(--border); background: none; color: var(--danger); font-size: 14px; font-weight: 600; cursor: pointer; }
-
-    /* Settings */
-    .settings-wrap { padding: 16px 14px; }
-    .settings-section { margin-bottom: 24px; }
-    .settings-section-label { font-size: 11px; font-weight: 700; color: var(--text2); letter-spacing: 0.6px; text-transform: uppercase; margin-bottom: 8px; padding-left: 2px; }
-    .settings-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--surface); border-radius: 10px; margin-bottom: 6px; }
-    .settings-row-lbl { font-size: 14px; }
-    .settings-row-val { font-size: 13px; color: var(--text2); }
-    .toggle-btn { width: 44px; height: 26px; border-radius: 13px; position: relative; cursor: pointer; border: none; transition: background 0.2s; flex-shrink: 0; }
-    .toggle-btn.on { background: var(--accent); }
-    .toggle-btn.off { background: var(--surface2); }
-    .toggle-btn::after { content: ''; position: absolute; width: 20px; height: 20px; border-radius: 50%; background: white; top: 3px; transition: left 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
-    .toggle-btn.on::after { left: 21px; }
-    .toggle-btn.off::after { left: 3px; }
-    .settings-select { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 13px; font-family: inherit; outline: none; width: 100%; }
-    .api-key-row { display: flex; gap: 8px; align-items: center; }
-    .api-key-inp { flex: 1; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 13px; font-family: monospace; outline: none; }
-    .api-key-inp:focus { border-color: var(--accent); }
-    .api-key-save { padding: 9px 14px; border-radius: 10px; border: none; background: var(--accent); color: white; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-
-    /* Misc */
-    .fmt b, .fmt strong { font-weight: 700; }
-    .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.75s linear infinite; display: inline-block; }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .mic-btn { width: 42px; height: 42px; border-radius: 50%; border: none; background: var(--surface2); color: var(--text); font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: background 0.2s; }
-    .mic-btn.listening { background: var(--danger); color: white; animation: pulse 1s ease-in-out infinite; }
-    @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.12); opacity: 0.85; } }
-    .empty-state { text-align: center; color: var(--text2); font-size: 13px; padding: 30px 16px; }
-  </style>
-</head>
-<body>
-<div id="root"></div>
-<script type="text/babel">
-  const { useState, useEffect, useRef, useCallback } = React;
-
-  const DEFAULT_MODEL = 'claude-sonnet-4-5';
-
-  const COLOR_PALETTE = [
-    '#f59e0b','#ef4444','#3b82f6','#8b5cf6',
-    '#10b981','#f97316','#ec4899','#6b7280',
-    '#14b8a6','#a855f7','#06b6d4','#84cc16'
-  ];
-
-  const DEFAULT_CATEGORIES = [
-    { id: 'todo',     label: 'To Do',    color: '#f59e0b' },
-    { id: 'decision', label: 'Decision', color: '#8b5cf6' },
-    { id: 'done',     label: 'Done',     color: '#10b981' }
-  ];
-
-  const STATUS_OPTIONS = [
-    { value: 'open',        label: 'Open' },
-    { value: 'in-progress', label: 'In Progress' },
-    { value: 'decision',    label: 'Decision' },
-    { value: 'done',        label: 'Done' }
-  ];
-
-  // ─── Helpers ─────────────────────────────────────────────────────────────────
-  const uid  = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
-  const now  = () => new Date().toISOString();
-
-  const fmtDate = (d) => {
-    if (!d) return '';
-    const date  = new Date(d + 'T00:00:00');
-    const today = new Date(); today.setHours(0,0,0,0);
-    const diff  = Math.floor((date - today) / 86400000);
-    if (diff === 0) return 'Today';
-    if (diff === 1) return 'Tomorrow';
-    if (diff === -1) return 'Yesterday';
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-  };
-
-  const isOverdue = (d, status) => {
-    if (!d || status === 'done') return false;
-    const date  = new Date(d + 'T00:00:00');
-    const today = new Date(); today.setHours(0,0,0,0);
-    return date < today;
-  };
-
-  const fmtTime = (iso) => {
-    if (!iso) return '';
-    return new Date(iso).toLocaleString('en-US', { timeZone: 'America/Chicago', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  };
-
-  const timeAgo = (iso) => {
-    if (!iso) return '';
-    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    const days = Math.floor(hrs / 24);
-    if (days === 1) return 'Yesterday';
-    return `${days}d ago`;
-  };
-
-  const ls = {
-    get: (k, def) => { try { const v = localStorage.getItem(k); return v !== null ? JSON.parse(v) : def; } catch { return def; } },
-    set: (k, v)   => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} }
-  };
-
-  const fmtHtml = (text) =>
-    (text || '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
-
-  const stripMd = (text) =>
-    (text || '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1');
-
-  const parseNumbered = (text) => {
-    // Normalize inline answers (e.g. "1. done 2. still working") to multi-line
-    const normalized = text.includes('\n')
-      ? text
-      : text.replace(/\s+(\d+[.)]\s)/g, '\n$1');
-    const results = {}; const lines = normalized.split('\n');
-    let curNum = null; let curParts = [];
-    for (const line of lines) {
-      const m = line.match(/^(\d+)[.)]\s+(.+)/);
-      if (m) { if (curNum !== null) results[curNum] = curParts.join(' ').trim(); curNum = parseInt(m[1]); curParts = [m[2]]; }
-      else if (curNum !== null && line.trim()) curParts.push(line.trim());
-    }
-    if (curNum !== null) results[curNum] = curParts.join(' ').trim();
-    return results;
-  };
-
-  const copyText = async (text) => {
-    try { await navigator.clipboard.writeText(text); }
-    catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
-  };
-
-  // ─── Category Settings Modal ─────────────────────────────────────────────────
-  function CategorySettingsModal({ categories, onSave, onClose }) {
-    const [draft, setDraft] = useState(categories.map(c => ({ ...c })));
-
-    const update = (id, field, val) => setDraft(prev => prev.map(c => c.id === id ? { ...c, [field]: val } : c));
-    const addCat = () => setDraft(prev => [...prev, { id: uid(), label: 'New Category', color: '#6b7280' }]);
-    const delCat = (id) => { if (draft.length <= 1) return; setDraft(prev => prev.filter(c => c.id !== id)); };
-
-    return (
-      <div className="overlay" onClick={e => { if (e.target.classList.contains('overlay')) onClose(); }}>
-        <div className="modal">
-          <div className="modal-handle"/>
-          <div className="modal-hdr">
-            <span className="modal-hdr-title">⚙️ Board Categories</span>
-            <button className="icon-btn" onClick={onClose}>×</button>
-          </div>
-          {draft.map(cat => (
-            <div key={cat.id} className="cat-row">
-              <div className="cat-row-top">
-                <div className="cat-color-preview" style={{ background: cat.color }}/>
-                <input className="cat-name-inp" value={cat.label} onChange={e => update(cat.id, 'label', e.target.value)} placeholder="Category name"/>
-                <button className="cat-delete-btn" onClick={() => delCat(cat.id)} title="Delete category">×</button>
-              </div>
-              <div className="color-swatches">
-                {COLOR_PALETTE.map(color => (
-                  <button key={color} className={`color-swatch ${cat.color === color ? 'selected' : ''}`}
-                    style={{ background: color }} onClick={() => update(cat.id, 'color', color)}/>
-                ))}
-              </div>
-            </div>
-          ))}
-          <button className="add-cat-btn" onClick={addCat}>+ Add Category</button>
-          <div className="btn-row">
-            <button className="btn btn-primary" onClick={() => onSave(draft)}>Save Changes</button>
-            <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── Task Modal ───────────────────────────────────────────────────────────────
-  function TaskModal({ task, categories, onSave, onDelete, onClose }) {
-    const isNew = !task._exists;
-    const [form, setForm] = useState({ ...task });
-    const set = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }));
-
-    return (
-      <div className="overlay" onClick={e => { if (e.target.classList.contains('overlay')) onClose(); }}>
-        <div className="modal">
-          <div className="modal-handle"/>
-          <div className="modal-hdr">
-            <span className="modal-hdr-title">{isNew ? 'New Task' : 'Edit Task'}</span>
-            <button className="icon-btn" onClick={onClose}>×</button>
-          </div>
-          <div className="form-group">
-            <label className="form-lbl">Task Title</label>
-            <input className="form-inp" value={form.title || ''} onChange={set('title')} placeholder="What needs to be done?" autoFocus={isNew}/>
-          </div>
-          <div className="form-group">
-            <label className="form-lbl">Category</label>
-            <select className="form-sel" value={form.category || categories[0]?.id || 'todo'} onChange={set('category')}>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-lbl">Due Date *</label>
-            <input type="date" className="form-inp" value={form.dueDate || ''} onChange={set('dueDate')}/>
-          </div>
-          <div className="form-group">
-            <label className="form-lbl">Status</label>
-            <select className="form-sel" value={form.status || 'open'} onChange={set('status')}>
-              {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-lbl">Notes</label>
-            <textarea className="form-ta" value={form.notes || ''} onChange={set('notes')} placeholder="Additional context..."/>
-          </div>
-          <div className="form-group">
-            <label className="form-lbl">Decision Question</label>
-            <input className="form-inp" value={form.decisionQuestion || ''} onChange={set('decisionQuestion')} placeholder="What needs to be decided?"/>
-          </div>
-          <div className="form-group">
-            <label className="form-lbl">Decision Options</label>
-            <textarea className="form-ta" value={form.decisionOptions || ''} onChange={set('decisionOptions')} placeholder="What are the options? (or use ✨ AI Suggest in Threads)"/>
-          </div>
-          <div className="form-group">
-            <label className="form-lbl">Decision Maker</label>
-            <select className="form-sel" value={form.decisionMaker || ''} onChange={set('decisionMaker')}>
-              <option value="">— None —</option>
-              <option value="tarek">Tarek</option>
-              <option value="symon">Symon</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-lbl">Email Link</label>
-            <input className="form-inp" type="url" value={form.email || ''} onChange={set('email')} placeholder="https://..."/>
-          </div>
-          <div className="btn-row">
-            <button className="btn btn-primary" onClick={() => onSave(form)} disabled={!form.title?.trim()}>
-              {isNew ? 'Add Task' : 'Save Changes'}
-            </button>
-            {!isNew && (
-              <button className="btn btn-danger" onClick={() => { if (confirm('Delete this task and its thread?')) onDelete(form.id); }}>
-                Delete
-              </button>
-            )}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ─── Main App ─────────────────────────────────────────────────────────────────
-  function App() {
-    const [tab,           setTab]           = useState('chat');
-    const [darkMode,      setDarkMode]      = useState(() => ls.get('ol-dk', false));
-    const [model,         setModel]         = useState(() => ls.get('ol-mdl', DEFAULT_MODEL));
-    const [apiKey,        setApiKey]        = useState(() => ls.get('ol-key', ''));
-    const [apiKeyDraft,   setApiKeyDraft]   = useState(() => ls.get('ol-key', ''));
-    const [categories,    setCategories]    = useState(() => ls.get('ol-cats', DEFAULT_CATEGORIES));
-    const [tasks,         setTasks]         = useState(() => ls.get('ol-tasks', {}));
-    const [threads,       setThreads]       = useState(() => ls.get('ol-threads', {}));
-    const [chatHistory,   setChatHistory]   = useState(() => ls.get('ol-ch', []));
-    const [notifications, setNotifications] = useState(() => ls.get('ol-notifs', []));
-    const [tokens,        setTokens]        = useState(() => ls.get('ol-tok', { input: 0, output: 0 }));
-    const [eodState,      setEodState]      = useState(() => ls.get('ol-eod', null));
-    const [updateTaskState, setUpdateTaskState] = useState(() => ls.get('ol-upd', null));
-    const [agendaState,   setAgendaState]   = useState(() => ls.get('ol-agd', null));
-
-    const [chatInput,      setChatInput]      = useState('');
-    const [aiLoading,      setAiLoading]      = useState(false);
-    const [editTask,       setEditTask]       = useState(null);
-    const [showCatSettings,setShowCatSettings]= useState(false);
-    const [showHelp,       setShowHelp]       = useState(false);
-    const [showDecisionModal, setShowDecisionModal] = useState(false);
-    const [activeThread,   setActiveThread]   = useState(null);
-    const [threadInput,    setThreadInput]    = useState('');
-    const [threadMode,     setThreadMode]     = useState('log'); // 'log' | 'assist'
-    const [threadSort,     setThreadSort]     = useState({ by: 'lastUpdate', dir: 'desc' });
-    const [threadAiLoading,setThreadAiLoading]= useState(false);
-    const [collapsedCols,  setCollapsedCols]  = useState({});
-    const [copiedId,       setCopiedId]       = useState(null);
-    const [isListening,    setIsListening]    = useState(false);
-    const [decisionDraft,  setDecisionDraft]  = useState(null);
-    const [decisionDraftLoading, setDecisionDraftLoading] = useState(false);
-    const [summarizing,    setSummarizing]    = useState(false);
-    const [speechSupported, setSpeechSupported] = useState(false);
-    const recognitionRef   = useRef(null);
-    const lastSpeechRef    = useRef(0);     // timestamp of last detected speech
-    const manualStopRef    = useRef(false); // true when user tapped stop
-    const priorTextRef     = useRef('');    // finalized text from completed sessions
-    const sessionFinalRef  = useRef('');    // finalized text within current session
-
-    const chatEndRef        = useRef(null);
-    const chatTextareaRef   = useRef(null);
-    const threadTextareaRef = useRef(null);
-    const decisionBlockRef  = useRef(null);
-
-    // Persist
-    useEffect(() => ls.set('ol-cats',    categories),    [categories]);
-    useEffect(() => ls.set('ol-tasks',   tasks),         [tasks]);
-    useEffect(() => ls.set('ol-threads', threads),       [threads]);
-    useEffect(() => ls.set('ol-ch',      chatHistory),   [chatHistory]);
-    useEffect(() => ls.set('ol-notifs',  notifications), [notifications]);
-    useEffect(() => ls.set('ol-tok',     tokens),        [tokens]);
-    useEffect(() => ls.set('ol-eod',     eodState),      [eodState]);
-    useEffect(() => ls.set('ol-upd',     updateTaskState), [updateTaskState]);
-    useEffect(() => ls.set('ol-agd',     agendaState),   [agendaState]);
-    useEffect(() => ls.set('ol-mdl',     model),         [model]);
-    useEffect(() => { ls.set('ol-dk', darkMode); document.documentElement.classList.toggle('dark', darkMode); }, [darkMode]);
-    useEffect(() => { document.documentElement.classList.toggle('dark', ls.get('ol-dk', false)); }, []);
-    useEffect(() => {
-      const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-      if (!SR) return;
-      const rec = new SR();
-      rec.continuous     = true;   // keep going through sentence pauses
-      rec.interimResults = true;
-      rec.lang = 'en-US';
-      rec.onresult = (e) => {
-        lastSpeechRef.current = Date.now();
-        let final = '', interim = '';
-        for (let i = 0; i < e.results.length; i++) {
-          if (e.results[i].isFinal) final   += e.results[i][0].transcript + ' ';
-          else                       interim += e.results[i][0].transcript;
-        }
-        sessionFinalRef.current = final;
-        setChatInput(priorTextRef.current + final + interim);
-      };
-      rec.onend = () => {
-        // Save finalized text from this session before any restart
-        priorTextRef.current   += sessionFinalRef.current;
-        sessionFinalRef.current = '';
-        if (manualStopRef.current) {
-          // User tapped stop — clean up fully
-          manualStopRef.current = false;
-          priorTextRef.current  = '';
-          setIsListening(false);
-          return;
-        }
-        // Auto-restart if last speech was within 30 seconds
-        if (Date.now() - lastSpeechRef.current < 30000) {
-          try { rec.start(); }
-          catch(err) { priorTextRef.current = ''; setIsListening(false); }
-        } else {
-          priorTextRef.current = '';
-          setIsListening(false);
-        }
-      };
-      rec.onerror = (e) => {
-        if (e.error === 'no-speech') return; // onend handles restart logic
-        priorTextRef.current = '';
-        setIsListening(false);
-      };
-      recognitionRef.current = rec;
-      setSpeechSupported(true);
-    }, []);
-
-    const toggleVoice = () => {
-      const rec = recognitionRef.current;
-      if (!rec) return;
-      if (isListening) {
-        manualStopRef.current = true;
-        rec.stop();
-      } else {
-        priorTextRef.current    = '';
-        sessionFinalRef.current = '';
-        manualStopRef.current   = false;
-        lastSpeechRef.current   = Date.now();
-        setChatInput('');
-        rec.start();
-        setIsListening(true);
-      }
-    };
-    useEffect(() => { chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [chatHistory, aiLoading]);
-    useEffect(() => {
-      const el = chatTextareaRef.current;
-      if (!el) return;
-      el.style.height = 'auto';
-      el.style.height = Math.min(el.scrollHeight, 240) + 'px';
-    }, [chatInput]);
-    useEffect(() => {
-      const el = threadTextareaRef.current;
-      if (!el) return;
-      el.style.height = 'auto';
-      el.style.height = Math.min(el.scrollHeight, 200) + 'px';
-    }, [threadInput]);
-    useEffect(() => { setDecisionDraft(null); setDecisionDraftLoading(false); setSummarizing(false); setThreadMode('log'); setThreadAiLoading(false); }, [activeThread]);
-
-    const unreadCount = notifications.filter(n => !n.read).length;
-
-    // ── AI helpers
-    const getCatLabel = (id) => categories.find(c => c.id === id)?.label || id;
-
-    const getBoardState = useCallback(() => {
-      const list = Object.values(tasks);
-      if (!list.length) return 'Board is empty.';
-      const byCat = {};
-      categories.forEach(c => { byCat[c.id] = []; });
-      list.forEach(t => { if (byCat[t.category] !== undefined) byCat[t.category].push(t); else (byCat['_other'] = byCat['_other']||[]).push(t); });
-      return categories.map(c => {
-        const catTasks = byCat[c.id] || [];
-        const lines = catTasks.length ? catTasks.map(t => `  [${t.id}] "${t.title}" | Due: ${t.dueDate||'NONE'} | Status: ${t.status}`).join('\n') : '  (empty)';
-        return `${c.label.toUpperCase()}:\n${lines}`;
-      }).join('\n\n');
-    }, [tasks, categories]);
-
-    const getThreadLog = (taskId) => {
-      const thread = threads[taskId];
-      if (!thread?.messages?.length) return 'No updates logged yet.';
-      return thread.messages.slice(-5).map(m => `[${fmtTime(m.timestamp)}] ${m.content}`).join('\n');
-    };
-
-    const getFullThreadLog = (taskId) => {
-      const thread = threads[taskId];
-      if (!thread?.messages?.length) return 'No updates logged yet.';
-      return thread.messages.map(m => `[${fmtTime(m.timestamp)}][${m.source?.toUpperCase()||'LOG'}] ${m.content}`).join('\n');
-    };
-
-    const catIds = categories.map(c => `"${c.id}"`).join('|');
-
-    const systemPrompt = useCallback(() =>
-      `You are OpsLog AI, a professional operations assistant for Symon, an Operations Manager reporting to his boss Tarek.
-
-Your job: help Symon track tasks, log updates, and generate concise executive summaries for Tarek.
-
-## Current Board State
-${getBoardState()}
-
-## Available Categories (columns)
-${categories.map(c => `- ${c.id}: ${c.label}`).join('\n')}
-
-## Task Status Options
-open | in-progress | decision | done
-
-## Rules
-1. Every task MUST have a due date. If missing, ask for it before adding.
-2. Be concise and professional.
-3. When adding a task, include a brief AI summary note.
-4. END every reply with exactly ONE ACTION block.
-5. If a task clearly involves a decision (by status or content), populate decisionQuestion and optionally decisionOptions in the payload.
-
-## ACTION Format
-ACTION:{"type":"TYPE","payload":{...}}
-
-## ACTION Types
-- ADD:    payload = { title, category (one of: ${catIds}), dueDate ("YYYY-MM-DD"), notes, status ("open"|"in-progress"|"decision"|"done"), decisionQuestion? (what needs to be decided), decisionOptions? (numbered options if obvious) }
-- EDIT:   payload = { id, changes: { title?, category?, dueDate?, notes?, status?, decisionQuestion?, decisionOptions? } }
-- DELETE: payload = { id }
-- NONE:   payload = {}`, [getBoardState, categories]);
-
-    const callAI = async (messages, sysOverride) => {
-      if (!apiKey) throw new Error('No API key — go to Settings to add your Anthropic API key.');
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
-        body: JSON.stringify({ model, system: sysOverride || systemPrompt(), messages, max_tokens: 1024 })
-      });
-      if (!res.ok) { const err = await res.json().catch(() => ({})); throw new Error(err?.error?.message || `API error ${res.status}`); }
-      const data = await res.json();
-      setTokens(prev => ({ input: prev.input + (data.usage?.input_tokens||0), output: prev.output + (data.usage?.output_tokens||0) }));
-      return data.content?.[0]?.text || '';
-    };
-
-    const applyAction = (aiText, nextTasks, nextThreads) => {
-      const match = aiText.match(/ACTION:(\{[\s\S]*?\})(?:\s*$)/m);
-      if (!match) return;
-      try {
-        const { type, payload } = JSON.parse(match[1]);
-        if (type === 'ADD') {
-          const id = uid();
-          nextTasks[id] = { id, title: payload.title, category: payload.category || categories[0]?.id || 'todo', dueDate: payload.dueDate, notes: payload.notes||'', status: payload.status||'open', decisionQuestion: payload.decisionQuestion||'', decisionOptions: payload.decisionOptions||'', decisionMaker: payload.decisionMaker||'', email: payload.email||'', createdAt: now(), updatedAt: now() };
-          if (!nextThreads[id]) nextThreads[id] = { messages: [] };
-        } else if (type === 'EDIT') {
-          if (nextTasks[payload.id]) nextTasks[payload.id] = { ...nextTasks[payload.id], ...payload.changes, updatedAt: now() };
-        } else if (type === 'DELETE') {
-          delete nextTasks[payload.id]; delete nextThreads[payload.id];
-        } else if (type === 'THREAD_UPDATE') {
-          const { taskId, content } = payload;
-          if (taskId) {
-            if (!nextThreads[taskId]) nextThreads[taskId] = { messages: [] };
-            nextThreads[taskId].messages.push({ id: uid(), content, timestamp: now(), source: 'update' });
-          }
-        }
-      } catch (e) { console.warn('Action parse:', e); }
-    };
-
-    // ── Send chat
-    const sendChat = async (text) => {
-      if (!text.trim() || aiLoading) return;
-      setChatInput('');
-      setChatHistory(prev => [...prev, { role: 'user', content: text, _show: text }]);
-      setAiLoading(true);
-      try {
-        if (text.toLowerCase().startsWith('accomplishment')) { await handleAccomplishment(text); return; }
-        if (text.toLowerCase().startsWith('update task')) { await handleUpdateTaskFlow(text); return; }
-        if (updateTaskState?.step === 'picking') { await handleUpdatePick(text); return; }
-        if (agendaState?.step === 'asked') { await handleAgendaResponse(text); return; }
-        if (eodState?.step === 'asked') { await handleEodResponse(text); return; }
-        const history = chatHistory.filter(m => m.role && m.content).map(m => ({ role: m.role, content: m.content }));
-        history.push({ role: 'user', content: text });
-        const aiText  = await callAI(history);
-        const display = aiText.replace(/ACTION:\{[\s\S]*?\}(?:\s*$)/m, '').trim();
-        const nextTasks = { ...tasks }; const nextThreads = { ...threads };
-        applyAction(aiText, nextTasks, nextThreads);
-        setTasks(nextTasks); setThreads(nextThreads);
-        setChatHistory(prev => [...prev, { role: 'assistant', content: aiText, _show: display }]);
-      } catch (e) {
-        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
-      } finally { setAiLoading(false); }
-    };
-
-    // ── EOD
-    const startEod = async (target) => {
-      if (aiLoading) return;
-      const openTasks = Object.values(tasks).filter(t => t.status !== 'done');
-      if (!openTasks.length) { setChatHistory(prev => [...prev, { role: 'assistant', content: 'No open tasks.', _show: 'No open tasks to review right now.' }]); return; }
-      const label = target === 'tarek' ? 'EOD: Tarek' : 'EOD: Symon';
-      setChatHistory(prev => [...prev, { role: 'user', content: label, _show: `📊 ${label}` }]);
-      setAiLoading(true);
-      try {
-        const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-        const taskLines = openTasks.map((t, i) =>
-          `${i+1}. **${t.title}** (Due: ${fmtDate(t.dueDate)||'No date'} · Status: ${t.status} · Category: ${getCatLabel(t.category)})${t.decisionQuestion ? `\n   Decision Question: ${t.decisionQuestion}` : ''}${t.decisionOptions ? `\n   Options: ${t.decisionOptions}` : ''}\n   Thread log: ${getThreadLog(t.id)}`
-        ).join('\n\n');
-        const aiText = await callAI(
-          [{ role: 'user', content: `Today is ${today}. Ask Symon for a brief status update on each open task. Number each question. Tell him to reply with numbered answers.\n\nOpen tasks:\n${taskLines}` }],
-          `You are OpsLog AI conducting an EOD check-in. Ask concise numbered questions about each task's status. Be professional and brief.`
-        );
-        setEodState({ tasks: openTasks, step: 'asked', target });
-        setChatHistory(prev => [...prev, { role: 'assistant', content: aiText, _show: aiText }]);
-      } catch (e) {
-        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
-      } finally { setAiLoading(false); }
-    };
-
-    const handleEodResponse = async (responseText) => {
-      try {
-        const numbered = parseNumbered(responseText);
-        const eodTasks = eodState.tasks;
-        const nextThreads = { ...threads };
-
-        // Log numbered answers to respective task threads
-        Object.entries(numbered).forEach(([numStr, updateText]) => {
-          const idx = parseInt(numStr) - 1;
-          if (idx >= 0 && idx < eodTasks.length) {
-            const task = eodTasks[idx];
-            if (!nextThreads[task.id]) nextThreads[task.id] = { messages: [] };
-            nextThreads[task.id].messages.push({ id: uid(), content: updateText, timestamp: now(), source: 'eod' });
-          }
-        });
-        setThreads(nextThreads);
-        setEodState(null);
-
-        const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-        const todayStr = new Date().toISOString().slice(0, 10);
-
-        const target = eodState.target;
-        const targetLabel = target === 'tarek' ? 'Tarek (CEO)' : 'Symon (Operations Manager)';
-
-        // SECTION 1 — Accomplishments: done tasks created/updated today
-        const todayDone = Object.values(tasks).filter(t =>
-          t.status === 'done' &&
-          (t.updatedAt?.slice(0,10) === todayStr || t.createdAt?.slice(0,10) === todayStr)
-        );
-        const accomplishLines = todayDone.length
-          ? todayDone.map(t => `• ${t.title}${t.notes ? ' — ' + t.notes : ''}`).join('\n')
-          : 'None';
-
-        // SECTION 2 — Task Updates: all open tasks, bold title
-        const taskUpdateLines = eodTasks.map((t, i) => {
-          const upd = numbered[i + 1];
-          return `• **${t.title}** — ${upd || t.notes || t.status}`;
-        }).join('\n');
-
-        // SECTION 3 — Decisions: open tasks with decisionQuestion + decisionOptions filtered by target decision maker
-        const decisionTasks = Object.values(tasks).filter(t =>
-          t.status !== 'done' && t.decisionQuestion && t.decisionOptions && t.decisionMaker === target
-        );
-        const decisionLines = decisionTasks.length
-          ? decisionTasks.map((t) => {
-              let line = `• **${t.title}** — ${t.decisionQuestion}`;
-              const opts = t.decisionOptions.split('\n')
-                .map(o => o.replace(/^\d+[.)]\s*/, '').trim()).filter(Boolean);
-              'ABCDE'.split('').slice(0, opts.length).forEach((ltr, j) => {
-                line += `\n   ${ltr}. ${opts[j]}`;
-              });
-              return line;
-            }).join('\n')
-          : null;
-
-        const promptParts = [
-          `**Accomplishments**\n${accomplishLines}`,
-          `**Task Updates**\n${taskUpdateLines}`,
-          decisionLines ? `**Decisions Required**\n${decisionLines}` : null,
-        ].filter(Boolean).join('\n\n');
-
-        const summary = await callAI(
-          [{ role: 'user', content: `Date: ${today}\nFor: ${targetLabel}\n\n${promptParts}\n\nFormat exactly as shown — keep bold titles (**title**), bullet points (•), and A/B/C options. Start with "EOD Update — ${today}". No greetings, no closing lines.` }],
-          `You are OpsLog AI. Reproduce the EOD sections exactly as given. Preserve bold formatting, bullet points, and A/B/C decision options. Be concise.`
-        );
-
-        setNotifications(prev => [{ id: uid(), content: summary, timestamp: now(), read: false }, ...prev]);
-        setChatHistory(prev => [...prev, { role: 'assistant', content: summary, _show: `✅ Updates saved to threads. EOD summary added to Notifications.\n\n${summary}` }]);
-      } catch (e) {
-        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
-      }
-    };
-
-    // ── Agenda
-    const startAgenda = async () => {
-      if (aiLoading) return;
-      const openTasks = Object.values(tasks).filter(t => t.status !== 'done');
-      if (!openTasks.length) {
-        setChatHistory(prev => [...prev, { role: 'assistant', content: 'No open tasks found for agenda.', _show: 'No open tasks found for agenda.' }]);
-        return;
-      }
-      setChatHistory(prev => [...prev, { role: 'user', content: 'Agenda', _show: '📋 Agenda' }]);
-      setAiLoading(true);
-      try {
-        const taskLines = openTasks.map((t, i) =>
-          `${i + 1}. [${getCatLabel(t.category)}] ${t.title}${t.dueDate ? ' (due ' + fmtDate(t.dueDate) + ')' : ''}${t.status === 'in-progress' ? ' — IN PROGRESS' : t.status === 'decision' ? ' — NEEDS DECISION' : ''}`
-        ).join('\n');
-        const aiText = await callAI(
-          [{ role: 'user', content: `Open tasks:\n${taskLines}\n\nGenerate numbered follow-up questions or action items for today.` }],
-          `You are an operations assistant. Given the open tasks below, generate a numbered list of focused follow-up questions or action items the user should address today. One question per task that needs attention. Be concise and direct.`
-        );
-        setAgendaState({ tasks: openTasks, step: 'asked' });
-        setChatHistory(prev => [...prev, { role: 'assistant', content: aiText + '\n\n_Reply with numbered answers (e.g. "1. done 2. following up with client")_', _show: aiText + '\n\n_Reply with numbered answers (e.g. "1. done 2. following up with client")_' }]);
-      } catch (e) {
-        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
-      } finally { setAiLoading(false); }
-    };
-
-    const handleAgendaResponse = async (responseText) => {
-      try {
-        const numbered = parseNumbered(responseText);
-        const agdTasks = agendaState.tasks;
-        const nextThreads = { ...threads };
-        let logged = 0;
-        Object.entries(numbered).forEach(([numStr, updateText]) => {
-          const idx = parseInt(numStr) - 1;
-          if (idx >= 0 && idx < agdTasks.length) {
-            const task = agdTasks[idx];
-            if (!nextThreads[task.id]) nextThreads[task.id] = { messages: [] };
-            nextThreads[task.id].messages.push({ id: uid(), content: updateText, timestamp: now(), source: 'agenda' });
-            logged++;
-          }
-        });
-        setThreads(nextThreads);
-        setAgendaState(null);
-        Object.entries(numbered).forEach(([numStr]) => {
-          const idx = parseInt(numStr) - 1;
-          if (idx >= 0 && idx < agdTasks.length) refreshThreadSummary(agdTasks[idx].id, nextThreads);
-        });
-        setChatHistory(prev => [...prev, { role: 'assistant', content: `✅ Logged ${logged} agenda update${logged !== 1 ? 's' : ''} to task threads.`, _show: `✅ Logged ${logged} agenda update${logged !== 1 ? 's' : ''} to task threads.` }]);
-      } catch (e) {
-        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
-      }
-    };
-
-    // ── Accomplishments
-    const handleAccomplishment = async (text) => {
-      const content = text.replace(/^accomplishment[:\s]*/i, '').trim();
-      if (!content) {
-        setChatHistory(prev => [...prev, { role: 'assistant', content: 'What did you accomplish? Type it after "Accomplishment: "', _show: 'What did you accomplish? Type it after "Accomplishment: "' }]);
-        setAiLoading(false);
-        return;
-      }
-      try {
-        const aiJson = await callAI(
-          [{ role: 'user', content: `Accomplishment: "${content}"` }],
-          `Extract a concise task title (max 8 words) and any context or notes from this accomplishment. Reply ONLY with valid JSON: {"title": "...", "notes": "..."}`
-        );
-        let title = content.slice(0, 80), notes = '';
-        try {
-          const match = aiJson.match(/\{[\s\S]*?\}/);
-          if (match) { const p = JSON.parse(match[0]); title = p.title || title; notes = p.notes || ''; }
-        } catch {}
-        const today = new Date().toISOString().slice(0, 10);
-        const id = uid();
-        const newTask = { id, title, category: categories[0]?.id || 'todo', dueDate: today, notes, status: 'done', decisionQuestion: '', decisionOptions: '', email: '', createdAt: now(), updatedAt: now() };
-        setTasks(prev => ({ ...prev, [id]: newTask }));
-        const nextThreads = { ...threads };
-        if (!nextThreads[id]) nextThreads[id] = { messages: [] };
-        nextThreads[id].messages.push({ id: uid(), content: content, timestamp: now(), source: 'update' });
-        setThreads(nextThreads);
-        setChatHistory(prev => [...prev, { role: 'assistant', content: `✅ Accomplishment logged: **${title}**${notes ? '\n_' + notes + '_' : ''}`, _show: `✅ Accomplishment logged: **${title}**${notes ? '\n_' + notes + '_' : ''}` }]);
-      } catch (e) {
-        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
-      } finally { setAiLoading(false); }
-    };
-
-    // ── Smart Update Task
-    const handleUpdateTaskFlow = async (text) => {
-      const updateText = text.replace(/^update task[:\s]*/i, '').trim();
-      if (!updateText) {
-        setChatHistory(prev => [...prev, { role: 'assistant', content: 'No update text.', _show: 'What should I update? Type it after "Update task: " and send again.' }]);
-        setAiLoading(false);
-        return;
-      }
-      const allTasks = Object.values(tasks);
-      if (!allTasks.length) {
-        setChatHistory(prev => [...prev, { role: 'assistant', content: 'No tasks.', _show: 'No tasks on the board yet.' }]);
-        setAiLoading(false);
-        return;
-      }
-      try {
-        const taskLines = allTasks.map((t, i) =>
-          `${i+1}. [${t.id}] "${t.title}" | Due: ${t.dueDate||'NONE'} | Status: ${t.status}\n   Thread: ${getThreadLog(t.id)}`
-        ).join('\n\n');
-        const aiText = await callAI(
-          [{ role: 'user', content: `Update message: "${updateText}"\n\nTasks and their threads:\n${taskLines}` }],
-          `You are OpsLog AI. Identify which task thread an update message belongs to.
-
-If ONE task clearly matches:
-- Reply: "Logging to **[task title]** ✓"
-- Write a 2–3 sentence summary of the current thread status including this new update
-- End with: ACTION:{"type":"THREAD_UPDATE","payload":{"taskId":"<id>"}}
-
-If TWO OR MORE tasks could match:
-- Reply: "This could apply to a few tasks — which thread should I log this to?"
-- List numbered options: "1. [title] — [one-line reason]"
-- End with: ACTION:{"type":"CHOICES","payload":{"taskIds":["<id1>","<id2>"]}}
-
-If NO task matches:
-- Explain that and ask for clarification
-- End with: ACTION:{"type":"NONE","payload":{}}`
-        );
-        const display = aiText.replace(/ACTION:\{[\s\S]*?\}(?:\s*$)/m, '').trim();
-        const actionMatch = aiText.match(/ACTION:(\{[\s\S]*?\})(?:\s*$)/m);
-        let actionType = 'NONE', actionPayload = {};
-        if (actionMatch) {
-          try { const p = JSON.parse(actionMatch[1]); actionType = p.type; actionPayload = p.payload; } catch {}
-        }
-        if (actionType === 'THREAD_UPDATE') {
-          const { taskId } = actionPayload;
-          const nextThreads = { ...threads };
-          if (!nextThreads[taskId]) nextThreads[taskId] = { messages: [] };
-          nextThreads[taskId].messages.push({ id: uid(), content: updateText, timestamp: now(), source: 'update' });
-          // Extract summary portion of the AI reply (everything after "Logging to **X** ✓") and cache it
-          const summaryText = display.replace(/^Logging to \*\*.*?\*\*\s*✓/i, '').trim();
-          if (summaryText) nextThreads[taskId].summary = summaryText;
-          setThreads(nextThreads);
-          setChatHistory(prev => [...prev, { role: 'assistant', content: aiText, _show: display }]);
-        } else if (actionType === 'CHOICES') {
-          const matchIds = actionPayload.taskIds || [];
-          const matchTasks = matchIds.map(id => tasks[id]).filter(Boolean);
-          setUpdateTaskState({ matches: matchTasks.length >= 2 ? matchTasks : allTasks, updateText, step: 'picking' });
-          setChatHistory(prev => [...prev, { role: 'assistant', content: aiText, _show: display }]);
-        } else {
-          setChatHistory(prev => [...prev, { role: 'assistant', content: aiText, _show: display }]);
-        }
-      } catch (e) {
-        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
-      }
-    };
-
-    const handleUpdatePick = async (text) => {
-      try {
-        const num = parseInt(text.trim());
-        const { matches, updateText } = updateTaskState;
-        if (isNaN(num) || num < 1 || num > matches.length) {
-          setChatHistory(prev => [...prev, { role: 'assistant', content: 'Invalid choice.', _show: `Please reply with a number between 1 and ${matches.length}.` }]);
-          setAiLoading(false);
-          return;
-        }
-        const selectedTask = matches[num - 1];
-        const nextThreads = { ...threads };
-        if (!nextThreads[selectedTask.id]) nextThreads[selectedTask.id] = { messages: [] };
-        nextThreads[selectedTask.id].messages.push({ id: uid(), content: updateText, timestamp: now(), source: 'update' });
-        setThreads(nextThreads);
-        setUpdateTaskState(null);
-        const threadLog = nextThreads[selectedTask.id].messages
-          .map(m => `[${fmtTime(m.timestamp)}] ${m.content}`).join('\n');
-        const summary = await callAI(
-          [{ role: 'user', content: `Task: "${selectedTask.title}" (Due: ${fmtDate(selectedTask.dueDate)||'No date'})\nNew update just logged: "${updateText}"\n\nFull thread:\n${threadLog}\n\nSummarise the current status of this task in 2–3 sentences. Plain text, no bullets.` }],
-          `You are OpsLog AI. Write a brief thread summary after a new update was logged. 2–3 sentences max, plain text.`
-        );
-        // Cache the summary on the thread so the Overview reflects it immediately
-        setThreads(prev => ({ ...prev, [selectedTask.id]: { ...prev[selectedTask.id], summary } }));
-        setChatHistory(prev => [...prev, { role: 'assistant', content: summary, _show: `✅ Logged to **${selectedTask.title}**.\n\n${summary}` }]);
-      } catch (e) {
-        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
-      }
-    };
-
-    // ── Thread Overview Summary
-    const refreshThreadSummary = async (taskId, latestThreads) => {
-      const thread = latestThreads[taskId];
-      if (!thread?.messages?.length || summarizing) return;
-      setSummarizing(true);
-      try {
-        const t = tasks[taskId];
-        const log = thread.messages.slice(-10).map(m => `[${fmtTime(m.timestamp)}] ${m.content}`).join('\n');
-        const summaryText = await callAI(
-          [{ role: 'user', content: `Task: "${t?.title}" (Due: ${fmtDate(t?.dueDate)||'No date'} · Status: ${t?.status})\n\nThread updates:\n${log}\n\nWrite a 2–3 sentence summary of the current status and what's next. Plain text only.` }],
-          `You are OpsLog AI. Summarise a task thread in 2–3 plain sentences. Focus on current status and next steps. No bullets, no headers.`
-        );
-        setThreads(prev => ({ ...prev, [taskId]: { ...prev[taskId], summary: summaryText } }));
-      } catch (e) { console.warn('Summary refresh failed:', e); }
-      finally { setSummarizing(false); }
-    };
-
-    // ── Decision AI Suggest
-    const suggestDecisionOptions = async (task) => {
-      setDecisionDraftLoading(true);
-      setDecisionDraft(null);
-      try {
-        const fullLog = getFullThreadLog(task.id);
-        const existingOptions = task.decisionOptions ? `\nCurrently saved options:\n${task.decisionOptions}` : '';
-        const aiText = await callAI(
-          [{ role: 'user', content: `Task: "${task.title}"\nStatus: ${task.status}\nNotes: ${task.notes||'None'}\nDecision Question: ${task.decisionQuestion||'Not specified'}${existingOptions}\n\nFull thread history:\n${fullLog}` }],
-          `You are OpsLog AI. Based on the task details AND its full thread history, suggest 2–3 clear, practical decision options that reflect the task's CURRENT state and any progress already made. If options were previously saved, suggest alternatives or updated versions. Format as a numbered list. One line per option. No preamble — start directly with "1.".`
-        );
-        const clean = aiText.replace(/ACTION:\{[\s\S]*?\}(?:\s*$)/m, '').trim();
-        const items = clean.split('\n').filter(l => l.trim()).map(l => ({ text: l.replace(/^\d+\.\s*/, '').trim(), checked: true }));
-        setDecisionDraft(items.length ? items : [{ text: clean, checked: true }]);
-      } catch (e) {
-        setDecisionDraft([{ text: `Error: ${e.message}`, checked: false }]);
-      } finally {
-        setDecisionDraftLoading(false);
-      }
-    };
-
-    const addMoreDecisionOptions = async (task) => {
-      setDecisionDraftLoading(true);
-      try {
-        const existing = Array.isArray(decisionDraft) ? decisionDraft.map(i => i.text).join('; ') : '';
-        const fullLog = getFullThreadLog(task.id);
-        const savedOptions = task.decisionOptions ? `\nPreviously saved options:\n${task.decisionOptions}` : '';
-        const aiText = await callAI(
-          [{ role: 'user', content: `Task: "${task.title}"\nStatus: ${task.status}\nNotes: ${task.notes||'None'}\nDecision Question: ${task.decisionQuestion||'Not specified'}${savedOptions}\nAlready suggested in this session: ${existing}\n\nFull thread history:\n${fullLog}` }],
-          `You are OpsLog AI. Suggest 2–3 ADDITIONAL decision options that are different from both the ones already suggested in this session AND any previously saved options. Base them on the task's current state as reflected in the thread history. Format as a numbered list. One line per option. No preamble — start directly with "1.".`
-        );
-        const clean = aiText.replace(/ACTION:\{[\s\S]*?\}(?:\s*$)/m, '').trim();
-        const newItems = clean.split('\n').filter(l => l.trim()).map(l => ({ text: l.replace(/^\d+\.\s*/, '').trim(), checked: true }));
-        setDecisionDraft(prev => Array.isArray(prev) ? [...prev, ...newItems] : newItems);
-      } catch (e) {
-        console.warn('Add more options failed:', e);
-      } finally {
-        setDecisionDraftLoading(false);
-      }
-    };
-
-    const saveDecisionDraft = () => {
-      if (!decisionDraft || !activeThread) return;
-      const checked = Array.isArray(decisionDraft) ? decisionDraft.filter(i => i.checked) : [];
-      const str = checked.map((i, idx) => `${idx + 1}. ${i.text}`).join('\n');
-      const nextTasks = { ...tasks, [activeThread]: { ...tasks[activeThread], decisionOptions: str, updatedAt: now() } };
-      setTasks(nextTasks);
-      setDecisionDraft(null);
-    };
-
-    // ── Task CRUD
-    const saveTask = (form) => {
-      const nextTasks   = { ...tasks, [form.id]: { ...form, updatedAt: now(), createdAt: form.createdAt||now() } };
-      const nextThreads = { ...threads };
-      if (!nextThreads[form.id]) nextThreads[form.id] = { messages: [] };
-      setTasks(nextTasks); setThreads(nextThreads); setEditTask(null);
-    };
-
-    const deleteTask = (id) => {
-      const nextTasks = { ...tasks }; delete nextTasks[id];
-      const nextThreads = { ...threads }; delete nextThreads[id];
-      setTasks(nextTasks); setThreads(nextThreads); setEditTask(null);
-    };
-
-    const newTaskTemplate = () => ({ id: uid(), title: '', category: categories[0]?.id||'todo', dueDate: '', notes: '', status: 'open', decisionQuestion: '', decisionOptions: '', decisionMaker: '', email: '', _exists: false });
-
-    // ── Thread updates
-    const addUpdate = (taskId, content) => {
-      if (!content.trim()) return;
-      const nextThreads = { ...threads };
-      if (!nextThreads[taskId]) nextThreads[taskId] = { messages: [] };
-      nextThreads[taskId].messages.push({ id: uid(), content, timestamp: now(), source: 'user' });
-      setThreads(nextThreads); setThreadInput('');
-      refreshThreadSummary(taskId, nextThreads); // background — no await
-    };
-
-    const handleThreadAssist = async (text) => {
-      if (!text.trim() || !apiKey) return;
-      const taskId = activeThread;
-      const task   = tasks[taskId];
-      // 1. Log user message immediately
-      const withUser = { ...threads };
-      if (!withUser[taskId]) withUser[taskId] = { messages: [] };
-      withUser[taskId] = { ...withUser[taskId], messages: [...withUser[taskId].messages, { id: uid(), content: text, timestamp: now(), source: 'user' }] };
-      setThreads(withUser);
-      setThreadInput('');
-      setThreadAiLoading(true);
-      try {
-        const sysPrompt = `You are OpsLog AI assisting with a specific task. Be concise and practical.\nTask: "${task.title}" | Status: ${task.status} | Due: ${task.dueDate||'none'} | Category: ${getCatLabel(task.category)}\nNotes: ${task.notes||'none'}\nDecision question: ${task.decisionQuestion||'none'}\nOptions: ${task.decisionOptions||'none'}`;
-        const history = (withUser[taskId]?.messages||[]).slice(-10).map(m => ({
-          role: m.source === 'ai' ? 'assistant' : 'user',
-          content: m.content
-        }));
-        const aiText = await callAI(history, sysPrompt);
-        const clean  = aiText.replace(/ACTION:\{[\s\S]*?\}(?:\s*$)/m, '').trim();
-        // 2. Log AI reply
-        const withAi = { ...withUser };
-        withAi[taskId] = { ...withAi[taskId], messages: [...withAi[taskId].messages, { id: uid(), content: clean, timestamp: now(), source: 'ai' }] };
-        setThreads(withAi);
-        refreshThreadSummary(taskId, withAi);
-      } catch(e) {
-        const withErr = { ...withUser };
-        withErr[taskId] = { ...withErr[taskId], messages: [...withErr[taskId].messages, { id: uid(), content: `Error: ${e.message}`, timestamp: now(), source: 'ai' }] };
-        setThreads(withErr);
-      } finally {
-        setThreadAiLoading(false);
-      }
-    };
-
-    // ── Category settings
-    const saveCategories = (newCats) => {
-      const nextTasks = { ...tasks };
-      const validIds  = newCats.map(c => c.id);
-      const fallbackId = newCats[0]?.id;
-      Object.keys(nextTasks).forEach(id => {
-        if (!validIds.includes(nextTasks[id].category)) nextTasks[id] = { ...nextTasks[id], category: fallbackId };
-      });
-      setCategories(newCats); setTasks(nextTasks); setShowCatSettings(false);
-    };
-
-    const handleCopy = async (id, content) => {
-      await copyText(stripMd(content)); setCopiedId(id); setTimeout(() => setCopiedId(null), 2000);
-    };
-
-    const saveApiKey = () => { const t = apiKeyDraft.trim(); ls.set('ol-key', t); setApiKey(t); };
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // RENDER TABS
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    const renderChat = () => (
-      <div className="chat-wrap">
-        {!apiKey && (
-          <div className="no-key-banner">
-            <strong>⚠️ API key not set.</strong> Go to <strong>Settings</strong> and paste your Anthropic API key to enable AI.
-          </div>
-        )}
-        <div className="chat-messages">
-          {chatHistory.length === 0 && <div className="chat-msg sys">Ready. Use the pills below or type anything.</div>}
-          {chatHistory.map((m, i) => {
-            const displayText = m._show || m.content;
-            const isEmail = m.role === 'assistant' && /subject\s*:/i.test(displayText);
-            const gmailUrl = () => {
-              const subMatch = displayText.match(/subject\s*:\s*(.+)/i);
-              const su = subMatch ? subMatch[1].trim() : '';
-              const body = displayText.replace(/subject\s*:.*\n?/i, '').trim();
-              return `https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(su)}&body=${encodeURIComponent(body)}`;
-            };
-            return (
-              <div key={i} className={`chat-msg ${m.role === 'user' ? 'user' : 'ai'}`}>
-                <span className="fmt" dangerouslySetInnerHTML={{ __html: fmtHtml(displayText) }}/>
-                {isEmail && (
-                  <div><button className="gmail-chat-btn" onClick={() => window.open(gmailUrl(), '_blank')}>📧 Open in Gmail</button></div>
-                )}
-              </div>
-            );
-          })}
-          {aiLoading && <div className="chat-msg ai"><div className="typing-dots"><span/><span/><span/></div></div>}
-          <div ref={chatEndRef}/>
-        </div>
-        <div className="chat-input-area">
-          {agendaState?.step === 'asked' && <div className="eod-banner agenda-banner">📋 Agenda active — reply with numbered answers (1. ... 2. ...)</div>}
-          {eodState?.step === 'asked' && <div className="eod-banner">📊 {eodState.target === 'tarek' ? 'EOD: Tarek' : 'EOD: Symon'} — reply with numbered answers (1. ... 2. ...)</div>}
-          {updateTaskState?.step === 'picking' && <div className="update-banner">✏️ Update Mode — reply with the number of the thread to update</div>}
-          <div className="pills">
-            <button className="pill accomplish-pill" onClick={() => setChatInput('Accomplishment: ')}>🏆 Accomplishments</button>
-            <button className="pill" onClick={() => setChatInput('Add task: ')}>＋ Add Task</button>
-            <button className="pill" onClick={() => setChatInput('Update task: ')}>✏️ Update Task</button>
-            <button className="pill agenda-pill" onClick={startAgenda} disabled={aiLoading}>📋 Agenda</button>
-            <button className="pill eod-pill" onClick={() => startEod('tarek')} disabled={aiLoading}>📊 EOD: Tarek</button>
-            <button className="pill eod-pill eod-symon-pill" onClick={() => startEod('symon')} disabled={aiLoading}>📊 EOD: Symon</button>
-            <button className="pill" onClick={() => { if (window.confirm('Clear chat history?')) setChatHistory([]); }}>🗑️ Clear Chat</button>
-          </div>
-          <div className="chat-row">
-            <textarea
-              ref={chatTextareaRef}
-              className="chat-textarea"
-              value={chatInput}
-              onChange={e => setChatInput(e.target.value)}
-              placeholder={agendaState?.step === 'asked' ? 'Type numbered answers...' : eodState?.step === 'asked' ? 'Type numbered updates...' : updateTaskState?.step === 'picking' ? 'Reply with a number...' : 'Type a task or message...'}
-              rows={1}
-              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(chatInput); } }}
-            />
-            {speechSupported && (
-              <button className={`mic-btn ${isListening ? 'listening' : ''}`} onClick={toggleVoice} title="Voice input">🎤</button>
-            )}
-            <button className="send-btn" onClick={() => sendChat(chatInput)} disabled={aiLoading || !chatInput.trim()}>↑</button>
-          </div>
-        </div>
-      </div>
-    );
-
-    const renderBoard = () => {
-      const allTasks = Object.values(tasks);
-      return (
-        <div className="board">
-          <div className="board-toolbar">
-            <button className="board-add-btn" onClick={() => setEditTask(newTaskTemplate())}>+ Add Task Manually</button>
-            <button className="board-settings-btn" onClick={() => setShowCatSettings(true)} title="Edit categories">⚙️</button>
-          </div>
-          {categories.map(col => {
-            const colTasks = allTasks
-              .filter(t => t.category === col.id)
-              .sort((a, b) => new Date(a.dueDate||'9999-12-31') - new Date(b.dueDate||'9999-12-31'));
-            const collapsed = collapsedCols[col.id];
-            return (
-              <div key={col.id} className="column">
-                <div className="col-header" style={{ borderLeftColor: col.color, borderLeftWidth: 4, borderLeftStyle: 'solid' }}
-                  onClick={() => setCollapsedCols(p => ({ ...p, [col.id]: !p[col.id] }))}>
-                  <div className="col-header-left">
-                    <div className="col-dot" style={{ background: col.color }}/>
-                    <span className="col-label">{col.label}</span>
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span className="col-count">{colTasks.length}</span>
-                    <span className="col-chevron">{collapsed ? '▼' : '▲'}</span>
-                  </div>
-                </div>
-                {!collapsed && (
-                  <div className="task-list">
-                    {colTasks.length === 0
-                      ? <div className="col-empty">No tasks</div>
-                      : colTasks.map(task => (
-                          <div key={task.id} className="task-card" onClick={() => setEditTask({ ...task, _exists: true })}>
-                            <div className="task-card-top">
-                              <div className="task-title">{task.title}</div>
-                              <span className={`status-chip ${task.status}`}>{STATUS_OPTIONS.find(s=>s.value===task.status)?.label||task.status}</span>
-                            </div>
-                            <div className="task-meta">
-                              {task.dueDate
-                                ? <span className={`due-badge ${isOverdue(task.dueDate, task.status) ? 'overdue' : ''}`}>
-                                    📅 {fmtDate(task.dueDate)}{isOverdue(task.dueDate, task.status) ? ' ⚠️' : ''}
-                                  </span>
-                                : <span className="due-badge overdue">⚠️ No due date</span>
-                              }
-                              {threads[task.id]?.messages?.length > 0 && (
-                                <span style={{ fontSize: 11, color: 'var(--text2)' }}>🧵 {threads[task.id].messages.length}</span>
-                              )}
-                            </div>
-                          </div>
-                        ))
-                    }
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      );
-    };
-
-    const renderThreads = () => {
-      if (activeThread) {
-        const task = tasks[activeThread];
-        if (!task) { setActiveThread(null); return null; }
-        const thread = threads[activeThread] || { messages: [] };
-        const col    = categories.find(c => c.id === task.category);
-        return (
-          <div className="thread-view-wrap">
-            <div className="thread-scrollable">
-            <div className="thread-view-hdr">
-              <button className="back-btn" onClick={() => setActiveThread(null)}>←</button>
-              <div className="thread-view-info">
-                <div className="thread-view-title">{task.title}</div>
-                <div className="thread-view-sub">
-                  {task.dueDate ? `Due ${fmtDate(task.dueDate)}` : 'No due date'}
-                  <span>·</span>
-                  <span className={`status-chip ${task.status}`} style={{ fontSize: 10 }}>{STATUS_OPTIONS.find(s=>s.value===task.status)?.label||task.status}</span>
-                  {col && <><span>·</span><span style={{ color: col.color, fontWeight: 600 }}>{col.label}</span></>}
-                </div>
-              </div>
-              <button className="icon-btn" onClick={() => { setShowDecisionModal(true); suggestDecisionOptions(task); }} title="Quick Decision">🔮</button>
-              <button className="icon-btn" onClick={() => setEditTask({ ...task, _exists: true })} title="Edit task">✏️</button>
-            </div>
-            <div className="thread-summary-block">
-              <div className="thread-summary-hdr">
-                <span>📋 Overview</span>
-                <button className="refresh-btn" onClick={() => refreshThreadSummary(activeThread, threads)} disabled={summarizing || !apiKey}>
-                  {summarizing ? '...' : '↻ Refresh'}
-                </button>
-              </div>
-              {summarizing
-                ? <div className="thread-summary-empty">Generating summary...</div>
-                : thread.summary
-                  ? <div className="thread-summary-text">{thread.summary}</div>
-                  : <div className="thread-summary-empty">No summary yet — add an update or tap ↻ Refresh.</div>
-              }
-            </div>
-            <div className="decision-block" ref={decisionBlockRef}>
-              <div className="decision-block-hdr">
-                <span>🔮 Decision</span>
-                <button className="decision-suggest-btn" onClick={() => suggestDecisionOptions(task)} disabled={decisionDraftLoading}>
-                  {decisionDraftLoading ? '...' : '✨ AI Suggest'}
-                </button>
-              </div>
-              {task.decisionQuestion
-                ? <div className="decision-question">{task.decisionQuestion}</div>
-                : <div className="decision-empty">No question set — add one in the task.</div>
-              }
-              {decisionDraft !== null
-                ? <>
-                    <div className="decision-checkbox-list">
-                      {(Array.isArray(decisionDraft) ? decisionDraft : []).map((item, i) => (
-                        <label key={i} className="decision-checkbox-item">
-                          <input type="checkbox" checked={item.checked}
-                            onChange={() => setDecisionDraft(prev => prev.map((it,idx) => idx===i ? {...it, checked: !it.checked} : it))}/>
-                          <span>{item.text}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <div className="decision-draft-btns">
-                      <button className="decision-draft-cancel" onClick={() => addMoreDecisionOptions(task)} disabled={decisionDraftLoading}>
-                        {decisionDraftLoading ? '...' : '➕ Add More'}
-                      </button>
-                      <button className="decision-draft-save" onClick={saveDecisionDraft}
-                        disabled={!Array.isArray(decisionDraft) || !decisionDraft.some(i => i.checked)}>Save Checked</button>
-                      <button className="decision-draft-cancel" onClick={() => setDecisionDraft(null)}>Cancel</button>
-                    </div>
-                  </>
-                : task.decisionOptions
-                  ? <div className="decision-options">{task.decisionOptions}</div>
-                  : <div className="decision-empty">No options set — tap ✨ AI Suggest or edit in task.</div>
-              }
-            </div>
-            <div className="updates-list">
-              {thread.messages.length === 0 && <div className="thread-empty">No updates yet. Add one below or run EOD.</div>}
-              {thread.messages.map(m => (
-                <div key={m.id} className={`update-entry ${m.source === 'eod' ? 'eod-source' : m.source === 'update' ? 'update-source' : m.source === 'ai' ? 'ai-source' : m.source === 'agenda' ? 'agenda-source' : ''}`}>
-                  {m.source === 'ai'
-                    ? <div className="update-text" dangerouslySetInnerHTML={{ __html: fmtHtml(m.content) }}/>
-                    : <div className="update-text">{m.content}</div>
-                  }
-                  <div className="update-meta">
-                    {fmtTime(m.timestamp)}
-                    {m.source === 'eod'    && <span className="update-eod-tag">EOD</span>}
-                    {m.source === 'update' && <span className="update-tag">UPDATE</span>}
-                    {m.source === 'ai'     && <span className="update-ai-tag">AI ASSIST</span>}
-                    {m.source === 'agenda' && <span className="update-tag" style={{background:'#fff8e7',color:'#b45309',borderColor:'#f59e0b'}}>AGENDA</span>}
-                  </div>
-                  {m.source === 'ai' && (
-                    <button className="thread-copy-btn" onClick={() => { navigator.clipboard.writeText(m.content); setCopiedId(m.id); setTimeout(() => setCopiedId(null), 1500); }}>
-                      {copiedId === m.id ? '✓ Copied' : '⎘ Copy'}
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-            {threadAiLoading && (
-              <div className="update-entry ai-source" style={{ opacity: 0.7 }}>
-                <div className="typing-dots"><span/><span/><span/></div>
-              </div>
-            )}
-            </div>
-            <div className="thread-bottom">
-              <div className="thread-mode-row">
-                <button className={`thread-mode-btn ${threadMode==='log' ? 'active' : ''}`} onClick={() => setThreadMode('log')}>📝 Log</button>
-                <button className={`thread-mode-btn ${threadMode==='assist' ? 'active' : ''}`} onClick={() => setThreadMode('assist')}>✨ Assist</button>
-              </div>
-              <div className="thread-input-row">
-                <textarea ref={threadTextareaRef} className="thread-textarea" value={threadInput} onChange={e => setThreadInput(e.target.value)}
-                  placeholder={threadMode === 'assist' ? 'Ask AI about this task...' : 'Add an update...'}
-                  rows={1}
-                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); threadMode === 'assist' ? handleThreadAssist(threadInput) : addUpdate(activeThread, threadInput); } }}/>
-                <button className="send-btn" onClick={() => threadMode === 'assist' ? handleThreadAssist(threadInput) : addUpdate(activeThread, threadInput)} disabled={!threadInput.trim() || threadAiLoading}>
-                  {threadAiLoading ? '…' : '+'}
-                </button>
-              </div>
-              <div className="thread-mode-label">
-                {threadMode === 'log' ? '📝 Log Mode' : '✨ AI Assist'}
-              </div>
-            </div>
-          </div>
-        );
-      }
-
-      const getLastUpdate = (id) => {
-        const msgs = threads[id]?.messages;
-        return msgs?.length ? new Date(msgs[msgs.length - 1].timestamp).getTime() : 0;
-      };
-      const sortDir = threadSort.dir === 'asc' ? 1 : -1;
-      const sortedIds = Object.keys(tasks).sort((a, b) => {
-        const ta = tasks[a], tb = tasks[b];
-        if (threadSort.by === 'lastUpdate') return (getLastUpdate(a) - getLastUpdate(b)) * sortDir;
-        if (threadSort.by === 'due') return (new Date(ta.dueDate||'9999-12-31') - new Date(tb.dueDate||'9999-12-31')) * sortDir;
-        if (threadSort.by === 'status') {
-          const o = { open:0, 'in-progress':1, decision:2, done:3 };
-          return ((o[ta.status]||0) - (o[tb.status]||0)) * sortDir;
-        }
-        return 0;
-      });
-      const setSortBy = (key) => setThreadSort(prev =>
-        prev.by === key ? { ...prev, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { by: key, dir: 'desc' }
-      );
-
-      return (
-        <div>
-          <div className="thread-sort-bar">
-            <span className="thread-sort-label">Sort</span>
-            {[['lastUpdate','Last Updated'],['due','Due Date'],['status','Status']].map(([key, label]) => (
-              <button key={key} className={`thread-sort-btn ${threadSort.by===key ? 'active' : ''}`} onClick={() => setSortBy(key)}>
-                {label}{threadSort.by===key ? (threadSort.dir==='desc' ? ' ↓' : ' ↑') : ''}
-              </button>
-            ))}
-          </div>
-          <div className="threads-list">
-            {sortedIds.length === 0 && <div className="thread-empty">No threads yet. Tasks added to the board auto-create a thread.</div>}
-            {sortedIds.map(id => {
-              const task    = tasks[id];
-              const thread  = threads[id] || { messages: [] };
-              const updates = thread.messages?.length || 0;
-              const lastTs  = thread.messages?.length ? thread.messages[thread.messages.length - 1].timestamp : null;
-              const col     = categories.find(c => c.id === task.category);
-              return (
-                <div key={id} className="thread-card" onClick={() => setActiveThread(id)}>
-                  <div className="thread-card-top">
-                    <div className="thread-card-title">{task.title}</div>
-                    <span className={`status-chip ${task.status}`} style={{ fontSize: 10, flexShrink: 0 }}>{STATUS_OPTIONS.find(s=>s.value===task.status)?.label||task.status}</span>
-                  </div>
-                  <div className="thread-card-meta">
-                    {task.dueDate ? `Due ${fmtDate(task.dueDate)}` : 'No due date'}
-                    {col && <span style={{ color: col.color, fontWeight: 600 }}> · {col.label}</span>}
-                    {isOverdue(task.dueDate, task.status) && ' · ⚠️ Overdue'}
-                  </div>
-                  <div className="thread-card-footer">
-                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                      <span className="thread-update-chip">🧵 {updates} update{updates !== 1 ? 's' : ''}</span>
-                      {task.email && (
-                        <button className="gmail-card-btn"
-                          onClick={e => { e.stopPropagation(); window.open(task.email, '_blank'); }}
-                          title="Open in Gmail">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="16" height="16">
-                            <path fill="#4caf50" d="M45,16.2l-5,2.75l-5,4.75L35,40h7c1.657,0,3-1.343,3-3V16.2z"/>
-                            <path fill="#1e88e5" d="M3,16.2l3.614,1.71L13,23.7V40H6c-1.657,0-3-1.343-3-3V16.2z"/>
-                            <polygon fill="#e53935" points="35,11.2 24,19.45 13,11.2 12,17 13,23.7 24,31.95 35,23.7 36,17"/>
-                            <path fill="#c62828" d="M3,12.298V16.2l10,7.5V11.2L9.876,8.859C9.132,8.301,8.228,8,7.298,8h0C4.924,8,3,9.924,3,12.298z"/>
-                            <path fill="#fbc02d" d="M45,12.298V16.2l-10,7.5V11.2l3.124-2.341C38.868,8.301,39.772,8,40.702,8h0 C43.076,8,45,9.924,45,12.298z"/>
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                    {lastTs && <span className="thread-last-update">{timeAgo(lastTs)}</span>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      );
-    };
-
-    const renderNotifications = () => (
-      <div>
-        {notifications.length > 0 && (
-          <div style={{ padding: '12px 14px 0' }}>
-            <button className="clear-all-btn" onClick={() => { if (confirm('Clear all notifications?')) setNotifications([]); }}>Clear All</button>
-          </div>
-        )}
-        <div className="notifs-wrap">
-          {notifications.length === 0 && <div className="empty-state">No notifications yet.<br/>Run 📊 Generate EOD to create one.</div>}
-          {notifications.map(n => (
-            <div key={n.id} className={`notif-card ${n.read ? 'is-read' : ''}`}>
-              <div className="notif-time">{fmtTime(n.timestamp)}</div>
-              <div className="notif-body fmt" dangerouslySetInnerHTML={{ __html: fmtHtml(n.content) }}/>
-              <div className="notif-actions">
-                <button className={`notif-action-btn copy-btn ${copiedId === n.id ? 'copied' : ''}`} onClick={() => handleCopy(n.id, n.content)}>
-                  {copiedId === n.id ? '✓ Copied!' : '📋 Copy Text'}
-                </button>
-                {!n.read && (
-                  <button className="notif-action-btn" onClick={() => setNotifications(prev => prev.map(x => x.id === n.id ? {...x, read:true} : x))}>
-                    Mark Read
-                  </button>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-
-    const renderSettings = () => {
-      const costUsd = (tokens.input / 1e6 * 3) + (tokens.output / 1e6 * 15);
-      return (
-        <div className="settings-wrap">
-          <button className="btn btn-primary" style={{width:'100%', marginBottom:16}} onClick={() => setShowHelp(true)}>
-            📖 Help Guide & SOP
-          </button>
-          <div className="settings-section">
-            <div className="settings-section-label">API Key</div>
-            <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '12px 14px', marginBottom: 6 }}>
-              <div className="form-lbl" style={{ marginBottom: 8 }}>Anthropic API Key</div>
-              <div className="api-key-row">
-                <input type="password" className="api-key-inp" value={apiKeyDraft} onChange={e => setApiKeyDraft(e.target.value)}
-                  placeholder="sk-ant-..." onKeyDown={e => { if (e.key === 'Enter') saveApiKey(); }}/>
-                <button className="api-key-save" onClick={saveApiKey}>Save</button>
-              </div>
-              {apiKey && <div style={{ fontSize: 12, color: '#10b981', marginTop: 8, fontWeight: 600 }}>✓ Key saved</div>}
-            </div>
-          </div>
-
-          <div className="settings-section">
-            <div className="settings-section-label">Display</div>
-            <div className="settings-row">
-              <span className="settings-row-lbl">Dark Mode</span>
-              <button className={`toggle-btn ${darkMode ? 'on' : 'off'}`} onClick={() => setDarkMode(p => !p)}/>
-            </div>
-          </div>
-
-          <div className="settings-section">
-            <div className="settings-section-label">AI Model</div>
-            <div style={{ background: 'var(--surface)', borderRadius: 10, padding: '12px 14px' }}>
-              <select className="settings-select" value={model} onChange={e => setModel(e.target.value)}>
-                <option value="claude-sonnet-4-5">Claude Sonnet 4.5 (Recommended)</option>
-                <option value="claude-opus-4-5">Claude Opus 4.5 (Powerful)</option>
-                <option value="claude-haiku-4-5">Claude Haiku 4.5 (Fast)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="settings-section">
-            <div className="settings-section-label">Usage</div>
-            <div className="settings-row">
-              <div>
-                <div className="settings-row-lbl">AI Cost</div>
-                <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 2 }}>{tokens.input.toLocaleString()} in · {tokens.output.toLocaleString()} out tokens</div>
-              </div>
-              <div style={{ textAlign: 'right', fontWeight: 600 }}>${costUsd.toFixed(4)}</div>
-            </div>
-            <button className="btn btn-ghost" style={{ fontSize: 12, padding: '7px 14px', marginTop: 2 }}
-              onClick={() => { if (confirm('Reset cost counter?')) setTokens({ input: 0, output: 0 }); }}>
-              Reset Counter
-            </button>
-          </div>
-
-          <div className="settings-section">
-            <div className="settings-section-label">Data</div>
-            <div className="settings-row"><span className="settings-row-lbl">Tasks</span><span className="settings-row-val">{Object.keys(tasks).length}</span></div>
-            <div className="settings-row"><span className="settings-row-lbl">Threads</span><span className="settings-row-val">{Object.keys(threads).length}</span></div>
-            <div className="settings-row"><span className="settings-row-lbl">Notifications</span><span className="settings-row-val">{notifications.length}</span></div>
-            <div style={{ marginTop: 8 }}>
-              <button className="btn btn-danger" style={{ fontSize: 12, padding: '7px 14px', width: '100%' }}
-                onClick={() => { if (confirm('Clear ALL data? Cannot be undone.')) { setTasks({}); setThreads({}); setChatHistory([]); setNotifications([]); setEodState(null); setUpdateTaskState(null); setTokens({ input:0, output:0 }); } }}>
-                Clear All Data
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    };
-
-    const tabs = [
-      { id: 'chat',          label: 'Chat',     icon: '💬' },
-      { id: 'board',         label: 'Board',    icon: '📋' },
-      { id: 'threads',       label: 'Threads',  icon: '🧵' },
-      { id: 'notifications', label: 'Notifs',   icon: '🔔', badge: unreadCount },
-      { id: 'settings',      label: 'Settings', icon: '⚙️' }
-    ];
-
-    return (
-      <div className="app">
-        <div className="header">
-          <h1>TMG Ops Log</h1>
-        </div>
-        <div className="tabbar">
-          {tabs.map(t => (
-            <button key={t.id} className={tab === t.id ? 'active' : ''}
-              onClick={() => { setTab(t.id); if (t.id !== 'threads') setActiveThread(null); }}>
-              <span className="tab-icon">
-                {t.icon}
-                {t.badge > 0 && <span className="tab-dot">{t.badge}</span>}
-              </span>
-              <span className="tab-label">{t.label}</span>
-            </button>
-          ))}
-        </div>
-        <div className="content">
-          {tab === 'chat'          && renderChat()}
-          {tab === 'board'         && renderBoard()}
-          {tab === 'threads'       && renderThreads()}
-          {tab === 'notifications' && renderNotifications()}
-          {tab === 'settings'      && renderSettings()}
-        </div>
-        {editTask && <TaskModal task={editTask} categories={categories} onSave={saveTask} onDelete={deleteTask} onClose={() => setEditTask(null)}/>}
-        {showCatSettings && <CategorySettingsModal categories={categories} onSave={saveCategories} onClose={() => setShowCatSettings(false)}/>}
-        {showDecisionModal && activeThread && tasks[activeThread] && (
-          <div className="overlay" onClick={e => { if (e.target.classList.contains('overlay')) { setShowDecisionModal(false); setDecisionDraft(null); } }}>
-            <div className="modal" style={{ maxHeight: '80vh' }}>
-              <div className="modal-handle"/>
-              <div className="modal-hdr">
-                <span className="modal-hdr-title">🔮 Decision</span>
-                <button className="icon-btn" onClick={() => { setShowDecisionModal(false); setDecisionDraft(null); }}>×</button>
-              </div>
-              <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 12 }}>
-                {tasks[activeThread].decisionQuestion ? tasks[activeThread].decisionQuestion : <em>No decision question set on this task.</em>}
-              </div>
-              {decisionDraftLoading && (
-                <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text2)' }}>
-                  <div className="typing-dots"><span/><span/><span/></div>
-                  <div style={{ marginTop: 8, fontSize: 12 }}>Generating options…</div>
-                </div>
-              )}
-              {!decisionDraftLoading && decisionDraft !== null && (
-                <>
-                  <div className="decision-checkbox-list">
-                    {(Array.isArray(decisionDraft) ? decisionDraft : []).map((item, i) => (
-                      <label key={i} className="decision-checkbox-item">
-                        <input type="checkbox" checked={item.checked}
-                          onChange={() => setDecisionDraft(prev => prev.map((it, idx) => idx === i ? { ...it, checked: !it.checked } : it))}/>
-                        <span>{item.text}</span>
-                      </label>
-                    ))}
-                  </div>
-                  <div className="decision-draft-btns" style={{ marginTop: 14 }}>
-                    <button className="decision-draft-cancel"
-                      onClick={() => addMoreDecisionOptions(tasks[activeThread])}
-                      disabled={decisionDraftLoading}>➕ Add More</button>
-                    <button className="decision-draft-save"
-                      onClick={() => { saveDecisionDraft(); setShowDecisionModal(false); }}
-                      disabled={!Array.isArray(decisionDraft) || !decisionDraft.some(i => i.checked)}>Save Checked</button>
-                    <button className="decision-draft-cancel"
-                      onClick={() => { setShowDecisionModal(false); setDecisionDraft(null); }}>Cancel</button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
-        )}
-        {showHelp && (
-          <div className="overlay" onClick={e => { if (e.target.classList.contains('overlay')) setShowHelp(false); }}>
-            <div className="modal" style={{maxHeight:'92vh'}}>
-              <div className="modal-handle"/>
-              <div className="modal-hdr">
-                <span className="modal-hdr-title">📖 TMG Ops Log — Training Guide</span>
-                <button className="icon-btn" onClick={() => setShowHelp(false)}>×</button>
-              </div>
-              <div style={{fontSize:13, lineHeight:1.65, color:'var(--text)', paddingBottom:8}} dangerouslySetInnerHTML={{__html: `
-<p style="color:var(--text2);font-size:12px;margin-bottom:16px">Version 1.0 · For: The Morshed Group — All Team Members</p>
-
-<h3 style="margin:0 0 6px;font-size:15px">1. What Is TMG Ops Log?</h3>
-<p>TMG Ops Log is an internal operations tracking tool for managing tasks, logging updates, tracking decisions, and generating end-of-day (EOD) summaries — all powered by AI.</p>
-<p style="margin-top:6px"><strong>Who uses it:</strong><br>
-• <strong>Symon (Ops Manager)</strong> — Manages tasks, logs progress, generates EOD reports<br>
-• <strong>Tarek (CEO)</strong> — Reads EOD notifications, makes decisions<br>
-• <strong>Team members</strong> — View tasks, add thread updates, log accomplishments</p>
-
-<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
-
-<h3 style="margin:0 0 6px;font-size:15px">2. Getting Started</h3>
-<p>Go to <strong>⚙️ Settings</strong> → enter your <strong>Anthropic API Key</strong> (sk-ant-...) → tap <strong>Save</strong>. Select your preferred AI model (Sonnet recommended).</p>
-
-<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
-
-<h3 style="margin:0 0 6px;font-size:15px">3. The 5 Tabs</h3>
-<p>
-💬 <strong>Chat</strong> — AI assistant, EOD, Agenda, quick actions<br>
-📋 <strong>Board</strong> — Task board by category<br>
-🧵 <strong>Threads</strong> — Full update history per task<br>
-🔔 <strong>Notifs</strong> — EOD summaries and notifications<br>
-⚙️ <strong>Settings</strong> — API key, model, dark mode, data</p>
-
-<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
-
-<h3 style="margin:0 0 6px;font-size:15px">4. Board — Managing Tasks</h3>
-<p><strong>Create a task:</strong> Tap <strong>+ Add Task Manually</strong> on the Board, or type <code>Add task: [description]</code> in Chat.</p>
-<p style="margin-top:8px"><strong>Task fields:</strong><br>
-• <strong>Title</strong> — What needs to be done (required)<br>
-• <strong>Category</strong> — Which column it belongs to<br>
-• <strong>Due Date</strong> — When it's due (required)<br>
-• <strong>Status</strong> — Open / In Progress / Decision / Done<br>
-• <strong>Notes</strong> — Context or background<br>
-• <strong>Decision Question</strong> — What needs to be decided?<br>
-• <strong>Decision Options</strong> — Numbered choices<br>
-• <strong>Decision Maker</strong> — Tarek or Symon (routes to correct EOD)<br>
-• <strong>Email Link</strong> — URL to related email</p>
-
-<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
-
-<h3 style="margin:0 0 6px;font-size:15px">5. Threads — Tracking Updates</h3>
-<p>Every task has a thread. Tap any task in Threads tab to see its full history.</p>
-<p style="margin-top:8px"><strong>Update sources (color-coded):</strong><br>
-🟠 <strong>EOD</strong> — Logged during EOD check-in<br>
-🟢 <strong>UPDATE</strong> — Manually logged or via Update Task chat<br>
-🔵 <strong>AI</strong> — AI Assist mode response<br>
-🟡 <strong>AGENDA</strong> — Logged during Agenda check-in</p>
-<p style="margin-top:8px"><strong>Log vs Assist mode:</strong> Use <strong>📝 Log</strong> to add a plain update. Use <strong>✨ Assist</strong> to chat with AI about the specific task.</p>
-<p style="margin-top:8px"><strong>Decision Block:</strong> Use <strong>✨ AI Suggest</strong> to generate decision options. Tap <strong>➕ Add More</strong> to get additional options. Check the ones you want and tap <strong>Save Checked</strong>.</p>
-
-<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
-
-<h3 style="margin:0 0 6px;font-size:15px">6. Chat — Daily Workflows</h3>
-<p><strong>Pill Button Reference:</strong></p>
-<p>
-🏆 <strong>Accomplishments</strong> — Log completed work as a Done task with today's date<br>
-＋ <strong>Add Task</strong> — Create a task via AI<br>
-✏️ <strong>Update Task</strong> — Route a quick update to the right task<br>
-📋 <strong>Agenda</strong> — Morning check-in with action items per open task<br>
-📊 <strong>EOD: Tarek</strong> — End-of-day report for Tarek<br>
-📊 <strong>EOD: Symon</strong> — Personal end-of-day summary<br>
-🗑️ <strong>Clear Chat</strong> — Clear chat history</p>
-
-<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
-
-<h3 style="margin:0 0 6px;font-size:15px">7. EOD Workflow (Step by Step)</h3>
-<p><strong>1.</strong> Tap <strong>📊 EOD: Tarek</strong><br>
-<strong>2.</strong> AI asks numbered questions for each open task<br>
-<strong>3.</strong> Reply with numbered answers on one or multiple lines:<br>
-<em>"1. Sent the proposal 2. Waiting on client feedback 3. Meeting confirmed"</em><br>
-<strong>4.</strong> App logs each answer to the task thread<br>
-<strong>5.</strong> EOD notification is generated in <strong>🔔 Notifs</strong> with 3 sections:<br>
-&nbsp;&nbsp;• <strong>Accomplishments</strong> — Done tasks from today<br>
-&nbsp;&nbsp;• <strong>Task Updates</strong> — All open tasks with your answers<br>
-&nbsp;&nbsp;• <strong>Decisions Required</strong> — Tasks assigned to Tarek with A/B/C options</p>
-
-<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
-
-<h3 style="margin:0 0 6px;font-size:15px">8. Agenda Workflow (Step by Step)</h3>
-<p><strong>1.</strong> Tap <strong>📋 Agenda</strong> (best used in the morning)<br>
-<strong>2.</strong> AI generates numbered action items for each open task<br>
-<strong>3.</strong> Reply with numbered answers:<br>
-<em>"1. Done 2. Following up today 3. Scheduled for Thursday"</em><br>
-<strong>4.</strong> Each answer is logged to the task thread with an AGENDA tag</p>
-
-<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
-
-<h3 style="margin:0 0 6px;font-size:15px">9. Accomplishments (Step by Step)</h3>
-<p><strong>1.</strong> Tap <strong>🏆 Accomplishments</strong><br>
-<strong>2.</strong> Type naturally: <em>"Accomplishment: Submitted lease renewal for Unit 302 — for downtown tower"</em><br>
-<strong>3.</strong> AI creates a <strong>Done</strong> task with today's date, short title, and your context as notes<br>
-<strong>4.</strong> It will appear in your next EOD's Accomplishments section</p>
-
-<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
-
-<h3 style="margin:0 0 6px;font-size:15px">10. Symon's Daily Routine</h3>
-<p>☀️ <strong>Morning:</strong> Tap 📋 Agenda → reply with numbered status updates<br>
-🔄 <strong>During day:</strong> Use ✏️ Update Task as things happen · Use 🏆 Accomplishments when you finish something<br>
-🌙 <strong>End of day:</strong> Tap 📊 EOD: Tarek → reply with updates → check 🔔 Notifs</p>
-
-<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
-
-<h3 style="margin:0 0 6px;font-size:15px">11. Tarek's Reference</h3>
-<p>1. Open <strong>🔔 Notifs</strong> to read EOD summaries<br>
-2. Look for <strong>Decisions Required</strong> — reply to Symon with your choices (e.g., "Task 3: Option B")<br>
-3. Use <strong>📋 Board</strong> to see all tasks at a glance<br>
-4. Tap any task to open its thread and read full history</p>
-
-<hr style="border:none;border-top:1px solid var(--border);margin:14px 0"/>
-
-<h3 style="margin:0 0 6px;font-size:15px">12. Tips</h3>
-<p>
-• Set <strong>Decision Maker</strong> on tasks early — it routes decisions to the right EOD<br>
-• Use <strong>voice input 🎤</strong> for quick hands-free updates<br>
-• <strong>Overdue tasks</strong> show a ⚠️ warning — keep due dates current<br>
-• <strong>Clear All Data</strong> in Settings is permanent — use with caution</p>
-              `}}/>
-            </div>
-          </div>
-        )}
-
-      </div>
-    );
-  }
-
-  ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
-</script>
-</body>
-</html>
+# TMG Ops Log — Training Guide & SOP
+
+**Version:** 1.1 | **Last Updated:** May 2026
+**For:** The Morshed Group — All Team Members
+
+---
+
+## 1. What Is TMG Ops Log?
+
+TMG Ops Log is an internal operations tracking tool for The Morshed Group real estate team. It allows the team to manage tasks, log updates, track decisions, and generate end-of-day (EOD) summaries — all in one place, powered by AI.
+
+**Who uses it:**
+- **Symon (Operations Manager)** — Primary user. Manages all tasks, logs daily progress, generates EOD summaries for Tarek.
+- **Tarek (CEO)** — Receives EOD notifications with task updates and decision requests.
+- **Other team members** — May view tasks, add thread updates, or log accomplishments.
+
+**How to access:** Open the app in any web browser. On mobile, you can save it to your home screen as a PWA (tap Share → Add to Home Screen).
+
+---
+
+## 2. Getting Started
+
+### First-Time Setup
+1. Open the app and go to the **⚙️ Settings** tab
+2. Enter your **Anthropic API Key** in the field (starts with `sk-ant-...`)
+3. Tap **Save** — you'll see a green "✓ Key saved" confirmation
+4. Select your preferred **AI model** (Claude Sonnet 4 is recommended for daily use)
+5. Toggle **Dark Mode** on/off to your preference
+
+> **Note:** Without an API key, the Board and Threads tabs still work, but AI features (chat, EOD, Agenda, AI Suggest) will be disabled.
+
+---
+
+## 3. Navigating the App
+
+The app has **5 tabs** at the bottom of the screen:
+
+| Tab | Icon | Purpose |
+|-----|------|---------|
+| Chat | 💬 | AI assistant, EOD workflows, quick actions |
+| Board | 📋 | Task board organized by category |
+| Threads | 🧵 | Detailed view of each task's update history |
+| Notifs | 🔔 | EOD summaries and generated notifications |
+| Settings | ⚙️ | API key, model, dark mode, data management |
+
+---
+
+## 4. Managing Tasks (Board Tab)
+
+### The Task Board
+Tasks are organized into columns by **Category** (e.g., To Do, Decision, Done). Each column shows a task count and can be collapsed by tapping the column header.
+
+**Task cards show:**
+- Task title
+- Status chip (color-coded — see Status Guide below)
+- Due date (turns red with ⚠️ if overdue)
+- Number of thread updates
+
+### Creating a Task
+**Option A — Manual (Board tab):**
+1. Tap **+ Add Task Manually** at the top of the Board
+2. Fill in the task form fields
+3. Tap **Add Task**
+
+**Option B — Via Chat:**
+1. Go to Chat tab
+2. Tap the **＋ Add Task** pill or type `Add task: [describe the task]`
+3. The AI will create the task and add it to the board
+
+### Editing a Task
+Tap any task card on the Board to open the edit modal.
+
+### Task Fields Reference
+
+| Field | Description | Required? |
+|-------|-------------|-----------|
+| **Title** | What needs to be done | ✅ Yes |
+| **Category** | Which column it belongs to | ✅ Yes |
+| **Due Date** | When it's due | ✅ Yes |
+| **Status** | Current state of the task | ✅ Yes |
+| **Notes** | Additional context or background | Optional |
+| **Decision Question** | What decision needs to be made | Optional |
+| **Decision Options** | The possible choices (numbered) | Optional |
+| **Decision Maker** | Who needs to decide: Tarek, Symon, or None | Optional |
+| **Email Link** | Link to a related email thread | Optional |
+
+### Status Guide
+
+| Status | Color | Meaning |
+|--------|-------|---------|
+| **Open** | Blue | Task is pending, not yet started |
+| **In Progress** | Amber | Actively being worked on |
+| **Decision** | Purple | Waiting on a decision before proceeding |
+| **Done** | Green | Completed |
+
+### Decision Fields
+Use these three fields together for tasks that require a decision:
+- **Decision Question** — e.g., "Should we renew the lease for Unit 302?"
+- **Decision Options** — e.g., "1. Renew for 1 year\n2. Go month-to-month\n3. Let expire"
+- **Decision Maker** — Select **Tarek** or **Symon** to route it to the right person's EOD
+
+> **Tip:** You can also use **✨ AI Suggest** inside a task's Thread to generate decision options automatically — including context from all logged updates.
+
+---
+
+## 5. Tracking Work (Threads Tab)
+
+Every task has a **Thread** — a log of all updates, AI responses, and EOD entries for that task.
+
+### Thread List View
+
+The list shows all tasks with a **sort bar** at the top:
+
+**Sort options** (tap to apply; tap again to flip direction ↑/↓):
+- **Last Updated** — tasks with the most recent update appear first *(default)*
+- **Due Date** — tasks sorted by deadline
+- **Status** — sorted by task status (open → in-progress → decision → done)
+
+Each card displays:
+- Task title and status chip
+- Due date and category
+- **🧵 N updates** chip on the lower left
+- **Gmail logo** beside the update count — tap to open the linked email thread (only shown if an email link is set)
+- **Time-ago label** in the lower right (e.g., "3m ago", "2h ago", "Yesterday") showing when the thread was last updated
+
+Tap any task to open its full thread.
+
+### Thread Detail View
+
+Once inside a thread, the **task title header is pinned** at the top so it stays visible as you scroll through a long thread. The **input area is pinned at the bottom** (above the tab bar), just like the Chat tab.
+
+**Header buttons (top right):**
+- **🔮** — Opens a Quick Decision modal instantly from wherever you are in the thread. AI generates fresh options based on the full thread context. No scrolling needed.
+- **✏️** — Opens the task edit form
+
+**1. Overview Block**
+- An AI-generated 2–3 sentence summary of the task's current status
+- Tap **↻ Refresh** to regenerate the summary from recent updates
+
+**2. Decision Block**
+- Shows the saved decision question and options
+- Use **✨ AI Suggest** to generate 2–3 decision options — the AI reads the task details **plus the full thread history** and any previously saved options, so suggestions stay relevant as the task evolves
+- Use **➕ Add More** to append additional AI-suggested options (avoids repeating existing or saved options)
+- Check/uncheck options, then tap **Save Checked** to save to the task
+
+**Quick Decision Modal (🔮)**
+
+Tap **🔮** in the header at any time — even deep in a long thread — to open a floating panel that:
+1. Immediately generates new decision options using the full thread history as context
+2. Shows options as checkboxes (same as the inline Decision Block)
+3. Supports **➕ Add More** and **Save Checked**
+4. Closes automatically after saving, or tap Cancel / outside to dismiss without saving
+
+**3. Updates List**
+
+Each entry is color-coded by its source:
+
+| Color | Tag | Source |
+|-------|-----|--------|
+| 🟠 Orange left border | `EOD` | Logged during an EOD workflow |
+| 🟢 Green left border | `UPDATE` | Manually logged or via Update Task |
+| 🔵 Blue left border | `AI ASSIST` | AI Assist mode response |
+| 🟡 Amber left border | `AGENDA` | Logged during an Agenda workflow |
+
+The source tag and timestamp appear together at the bottom of each entry. All timestamps are displayed in **US Central time**.
+
+### Log Mode vs Assist Mode
+
+At the bottom of a thread, you'll see two mode buttons and a small mode indicator label:
+
+- **📝 Log** — Type a plain update. It saves directly to the thread (no AI). Label shows: *📝 Log Mode*
+- **✨ Assist** — Chat with AI about this specific task. AI has full context of the task details and thread history. Its response is saved to the thread. Label shows: *✨ AI Assist*
+
+The label always shows which mode is active so you know what will happen when you hit send.
+
+---
+
+## 6. Daily Workflows (Chat Tab)
+
+The Chat tab is the main workspace. Use the **pill buttons** at the bottom for quick actions.
+
+### Pill Buttons Quick Reference
+
+| Pill | What it does |
+|------|-------------|
+| 🏆 **Accomplishments** | Log something you completed today |
+| ＋ **Add Task** | Create a new task via AI chat |
+| ✏️ **Update Task** | Route a quick update to the right task |
+| 📋 **Agenda** | Generate daily follow-up questions for all open tasks |
+| 📊 **EOD: Tarek** | Generate end-of-day report for Tarek |
+| 📊 **EOD: Symon** | Generate personal end-of-day summary |
+| 🗑️ **Clear Chat** | Clear chat history (asks for confirmation) |
+
+---
+
+### Logging an Accomplishment
+
+Use this when you've completed something that wasn't a formal tracked task, or when you want it to appear in your EOD Accomplishments section.
+
+1. Tap **🏆 Accomplishments**
+2. Type your accomplishment naturally:
+   > `Accomplishment: Submitted the lease renewal for Unit 302 — for the downtown tower managed by Tarek`
+3. Tap Send
+4. The AI extracts a short title and notes, creates a **Done task** with today's date
+5. Confirmation: `✅ Accomplishment logged: Submitted Lease Renewal Unit 302`
+
+---
+
+### Adding a Task via Chat
+
+1. Tap **＋ Add Task**
+2. Describe the task:
+   > `Add task: Follow up with insurance broker about the new policy renewal, due May 30`
+3. The AI creates the task on the Board automatically
+
+---
+
+### Updating a Task via Chat
+
+1. Tap **✏️ Update Task**
+2. Describe what happened:
+   > `Update task: Called the plumber — confirmed repair is scheduled for Thursday`
+3. The AI identifies which task this belongs to and logs the update to its thread
+
+---
+
+### Running the Agenda (Daily Check-In)
+
+Use **Agenda** at the start of your day to get focused action items.
+
+1. Tap **📋 Agenda**
+2. AI generates numbered follow-up questions for each open task
+3. An amber banner appears: *"📋 Agenda active — reply with numbered answers"*
+4. Reply with numbered answers:
+   > `1. Sent follow-up email 2. Waiting on approval 3. Scheduled for tomorrow`
+5. Each answer is logged to its task's thread with an AGENDA tag
+6. Confirmation: `✅ Logged 3 agenda updates to task threads`
+
+---
+
+### Running EOD: Tarek
+
+Use this at the end of the day to generate a formal report for Tarek. The report includes:
+- **Accomplishments** — Tasks completed today
+- **Task Updates** — All open tasks with your status updates
+- **Decisions Required** — Tasks assigned to Tarek that need his decision (with A/B/C options)
+
+**Steps:**
+1. Tap **📊 EOD: Tarek**
+2. AI asks numbered questions for each open task
+3. A purple banner appears: *"📊 EOD: Tarek — reply with numbered answers"*
+4. Reply with numbered answers:
+   > `1. Sent the proposal 2. Still waiting on client feedback, follow up tomorrow 3. Meeting confirmed for Monday`
+5. App logs each answer to the corresponding thread
+6. AI generates the formatted EOD notification for Tarek (appears in **🔔 Notifs**)
+
+---
+
+### Running EOD: Symon (Personal)
+
+Same as above but creates a personal summary where **Decisions Required** shows tasks assigned to **Symon** only (not Tarek). Good for your own end-of-day review.
+
+---
+
+## 7. Reading Notifications (Notifs Tab)
+
+Notifications are generated automatically by EOD workflows.
+
+**Each notification shows:**
+- Timestamp (in US Central time)
+- Formatted EOD summary with sections: Accomplishments / Task Updates / Decisions Required
+- **📋 Copy Text** — copies the plain text to clipboard (for pasting into email, WhatsApp, etc.)
+- **Mark Read** — dims the notification once you've reviewed it
+
+### For Tarek — How to Read Your EOD
+When Symon sends you an EOD, look for it in the **🔔 Notifs** tab. The format is:
+
+```
+EOD Update — [Day, Month Date]
+
+**Accomplishments**
+• [Completed task] — [context]
+
+**Task Updates**
+• **[Task name]** — [Symon's update]
+
+**Decisions Required**
+• **[Task name]** — [Decision question]
+   A. [Option 1]
+   B. [Option 2]
+   C. [Option 3]
+```
+
+Reply to Symon with your decisions (e.g., "3A, 4B") so he can log them.
+
+---
+
+## 8. Settings & Data
+
+### Settings Overview
+
+| Setting | Description |
+|---------|-------------|
+| **API Key** | Your Anthropic API key for AI features |
+| **AI Model** | Claude Sonnet (recommended), Opus (powerful), Haiku (fast) |
+| **Dark Mode** | Toggle light/dark theme |
+| **Usage** | Shows estimated API cost + token counts |
+| **Reset Counter** | Resets the token usage counter |
+| **Clear All Data** | ⚠️ Deletes ALL tasks, threads, notifications, and chat history |
+
+> **Warning:** "Clear All Data" is permanent and cannot be undone. Use only if you need a fresh start.
+
+### Customizing Categories (Board Columns)
+1. Go to **Board** tab
+2. Tap the **⚙️** button at the top right
+3. Edit category names, change colors, or add new columns
+4. Tap **Save Categories**
+
+---
+
+## 9. Quick Reference — Keyboard / Chat Commands
+
+Type these directly in the Chat input:
+
+| Command | What happens |
+|---------|-------------|
+| `Accomplishment: [text]` | Creates a Done task with today's date |
+| `Add task: [description]` | AI creates a new task on the Board |
+| `Update task: [description]` | AI routes the update to the right task thread |
+| Any other message | General chat with Claude AI |
+
+**Voice Input:** Tap the 🎤 mic button to dictate. Recording stops automatically after 30 seconds of silence. Tap again to stop manually.
+
+---
+
+## 10. Role-Specific SOP
+
+### Symon — Daily Routine
+
+**Morning:**
+1. Open Chat tab → tap **📋 Agenda**
+2. Review AI-generated action items for each open task
+3. Reply with numbered answers to log morning status to threads
+
+**Throughout the day:**
+- Use **✏️ Update Task** to log progress as things happen
+- Use **🏆 Accomplishments** when you complete something
+- Open **Threads** tab to check/update specific task threads using Assist mode
+
+**End of Day:**
+1. Chat tab → tap **📊 EOD: Tarek**
+2. Reply to AI's questions with numbered status updates
+3. Check **🔔 Notifs** tab — copy the EOD summary if you need to forward it to Tarek separately
+4. Optionally run **📊 EOD: Symon** for your own personal record
+
+---
+
+### Tarek — How to Use the App
+
+1. Open the **🔔 Notifs** tab to read EOD summaries from Symon
+2. Look for **Decisions Required** section — each item has A/B/C options
+3. Reply to Symon with your decisions
+4. You can also open **📋 Board** to see all tasks at a glance
+5. Tap any task to open its thread and read the full update history
+
+---
+
+### Other Team Members
+
+1. **Viewing tasks:** Go to **📋 Board** to see all active tasks and their statuses
+2. **Viewing thread history:** Go to **🧵 Threads**, tap any task to see its full update log
+3. **Logging an update:** Inside a thread, use **📝 Log** mode to add a plain update
+4. **Using AI assist:** Inside a thread, switch to **✨ Assist** mode and ask AI questions about the task
+
+---
+
+## 11. Tips & Best Practices
+
+- **Be specific with updates** — the more context you give, the better AI summaries and decision suggestions will be
+- **Set decision makers early** — assign Tarek or Symon to tasks that need decisions so they appear in the right EOD
+- **Use Accomplishments daily** — logging done work ensures it shows up in Tarek's EOD report
+- **Keep due dates current** — overdue tasks show a warning and affect EOD sorting
+- **Use voice input** for quick updates — just tap 🎤 and speak naturally
+- **Run Agenda every morning** — it keeps threads updated and surfaces tasks that need attention
+- **Re-run AI Suggest as tasks progress** — the more updates logged on a thread, the more accurate and relevant the decision options will be
+
+---
+
+*TMG Ops Log is built for The Morshed Group. For technical support, contact Symon.*
