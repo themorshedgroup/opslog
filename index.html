@@ -181,7 +181,8 @@
     .update-entry.eod-source    { border-right: none; border-left: 3px solid var(--eod-color); }
     .update-entry.update-source { border-right: none; border-left: 3px solid #10b981; }
     .update-entry.ai-source     { border-right: none; border-left: 3px solid #3b82f6; }
-    .update-entry.agenda-source { border-right: none; border-left: 3px solid #f59e0b; }
+    .update-entry.agenda-source  { border-right: none; border-left: 3px solid #f59e0b; }
+    .update-entry.summary-source { border-right: none; border-left: 3px solid #a855f7; opacity: 0.75; font-style: italic; }
     .agenda-banner { background: #fff8e7; border-color: #f59e0b; color: #b45309; }
     html.dark .agenda-banner { background: #2d1f00; border-color: #f59e0b; color: #fcd34d; }
     .update-banner { background: rgba(16,185,129,0.1); border: 1px solid #10b981; border-radius: 8px; padding: 7px 12px; margin-bottom: 8px; font-size: 12px; color: #10b981; font-weight: 600; text-align: center; }
@@ -404,7 +405,13 @@
   };
 
   const fmtHtml = (text) =>
-    (text || '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>').replace(/\n/g, '<br>');
+    (text || '')
+      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+      .replace(/__(.*?)__/g, '<u>$1</u>')
+      .replace(/^---$/gm, '<hr style="border:none;border-top:1px solid #e6e6ea;margin:6px 0;">')
+      .replace(/^### (.+)$/gm, '<strong style="font-size:15px;display:block;margin:6px 0 2px;">$1</strong>')
+      .replace(/\n/g, '<br>');
 
   const stripMd = (text) =>
     (text || '').replace(/\*\*(.*?)\*\*/g, '$1').replace(/\*(.*?)\*/g, '$1');
@@ -1228,8 +1235,8 @@ If NO task matches:
           [{ role: 'user', content: `Task: "${t?.title}" (Due: ${fmtDate(t?.dueDate)||'No date'} · Status: ${t?.status})\n\nFull thread history:\n${log}\n\nWrite a concise 2–3 sentence summary of the current status, key updates, and what's next. Plain text only.` }],
           `You are OpsLog AI. Summarise a task thread in 2–3 plain sentences. Include current status, key updates, and next steps. No bullets, no headers.`
         );
-        // Write to both thread.summary (for display) and task.context (single source of truth for EOD)
-        setThreads(prev => ({ ...prev, [taskId]: { ...prev[taskId], summary: summaryText } }));
+        const summaryEntry = { id: uid(), content: 'Current Summary updated by AI', timestamp: now(), source: 'summary' };
+        setThreads(prev => ({ ...prev, [taskId]: { ...prev[taskId], summary: summaryText, messages: [...(prev[taskId]?.messages || []), summaryEntry] } }));
         setTasks(prev => ({ ...prev, [taskId]: { ...prev[taskId], context: summaryText, updatedAt: now() } }));
       } catch (e) { console.warn('Context refresh failed:', e); }
       finally { setSummarizing(false); }
@@ -1312,6 +1319,25 @@ No preamble, no explanation — just the JSON.`
       const next = before + marker + sel + marker + after;
       setEditingNotifText(next);
       setTimeout(() => { el.focus(); el.setSelectionRange(start + marker.length, end + marker.length); }, 0);
+    };
+
+    const applyNotifPrefix = (prefix) => {
+      const el = document.getElementById('notif-edit-textarea');
+      if (!el) return;
+      const pos = el.selectionStart;
+      const lineStart = editingNotifText.lastIndexOf('\n', pos - 1) + 1;
+      const next = editingNotifText.substring(0, lineStart) + prefix + editingNotifText.substring(lineStart);
+      setEditingNotifText(next);
+      setTimeout(() => { el.focus(); el.setSelectionRange(pos + prefix.length, pos + prefix.length); }, 0);
+    };
+
+    const applyNotifInsert = (text) => {
+      const el = document.getElementById('notif-edit-textarea');
+      if (!el) return;
+      const pos = el.selectionStart;
+      const next = editingNotifText.substring(0, pos) + text + editingNotifText.substring(pos);
+      setEditingNotifText(next);
+      setTimeout(() => { el.focus(); el.setSelectionRange(pos + text.length, pos + text.length); }, 0);
     };
 
     const saveDecisionDraft = () => {
@@ -1696,8 +1722,7 @@ No preamble, no explanation — just the JSON.`
                   ))}
                 </div>
               </div>
-              <span className="thread-mode-badge">{threadMode === 'log' ? 'LOG' : '✨ AI ASSIST'}</span>
-              <button className="icon-btn" onClick={() => setEditTask({ ...task, _exists: true })} title="Edit task">✏️</button>
+<button className="icon-btn" onClick={() => setEditTask({ ...task, _exists: true })} title="Edit task">✏️</button>
               <button className="icon-btn" onClick={() => { setShowDecisionModal(true); handleSuggestClick(task); }} title="AI Suggest Decision">🔮</button>
               <button className="icon-btn" onClick={() => setContextPopupId(activeThread)} title="Current Summary">📝</button>
             </div>
@@ -1798,7 +1823,7 @@ No preamble, no explanation — just the JSON.`
             <div className="updates-list">
               {thread.messages.length === 0 && <div className="thread-empty">No updates yet. Add one below or run EOD.</div>}
               {thread.messages.map(m => (
-                <div key={m.id} className={`update-entry ${m.source === 'eod' ? 'eod-source' : m.source === 'update' ? 'update-source' : m.source === 'ai' ? 'ai-source' : m.source === 'agenda' ? 'agenda-source' : ''}`}>
+                <div key={m.id} className={`update-entry ${m.source === 'eod' ? 'eod-source' : m.source === 'update' ? 'update-source' : m.source === 'ai' ? 'ai-source' : m.source === 'agenda' ? 'agenda-source' : m.source === 'summary' ? 'summary-source' : ''}`}>
                   {editingEntryId === m.id
                     ? <>
                         <textarea className="entry-edit-area" value={editingEntryText}
@@ -1819,10 +1844,11 @@ No preamble, no explanation — just the JSON.`
                           {m.source === 'eod'    && <span className="update-eod-tag">EOD</span>}
                           {m.source === 'update' && <span className="update-tag">UPDATE</span>}
                           {m.source === 'ai'     && <span className="update-ai-tag">AI ASSIST</span>}
-                          {m.source === 'agenda' && <span className="update-tag" style={{background:'#fff8e7',color:'#b45309',borderColor:'#f59e0b'}}>AGENDA</span>}
+                          {m.source === 'agenda'  && <span className="update-tag" style={{background:'#fff8e7',color:'#b45309',borderColor:'#f59e0b'}}>AGENDA</span>}
+                          {m.source === 'summary' && <span className="update-tag" style={{background:'#f5f0ff',color:'#7c3aed',borderColor:'#e9d5ff'}}>SUMMARY</span>}
                         </div>
                         <div className="entry-actions">
-                          <button className="entry-action-btn" onClick={() => { setEditingEntryId(m.id); setEditingEntryText(m.content); }}>✏️ Edit</button>
+                          {m.source !== 'summary' && <button className="entry-action-btn" onClick={() => { setEditingEntryId(m.id); setEditingEntryText(m.content); }}>✏️ Edit</button>}
                           <button className="entry-action-btn danger" onClick={() => deleteThreadEntry(activeThread, m.id)}>× Delete</button>
                           {m.source === 'ai' && (
                             <button className="entry-action-btn" onClick={() => { navigator.clipboard.writeText(m.content); setCopiedId(m.id); setTimeout(() => setCopiedId(null), 1500); }}>
@@ -1977,6 +2003,10 @@ No preamble, no explanation — just the JSON.`
                     <div className="notif-fmt-bar">
                       <button type="button" className="fmt-btn" title="Bold" onMouseDown={e => { e.preventDefault(); applyNotifFmt('**'); }}>B</button>
                       <button type="button" className="fmt-btn fmt-btn-italic" title="Italic" onMouseDown={e => { e.preventDefault(); applyNotifFmt('*'); }}>I</button>
+                      <button type="button" className="fmt-btn" title="Underline" style={{textDecoration:'underline'}} onMouseDown={e => { e.preventDefault(); applyNotifFmt('__'); }}>U</button>
+                      <button type="button" className="fmt-btn" title="Heading" onMouseDown={e => { e.preventDefault(); applyNotifPrefix('### '); }}>H</button>
+                      <button type="button" className="fmt-btn" title="Bullet point" onMouseDown={e => { e.preventDefault(); applyNotifPrefix('• '); }}>•</button>
+                      <button type="button" className="fmt-btn" title="Divider line" onMouseDown={e => { e.preventDefault(); applyNotifInsert('\n---\n'); }}>—</button>
                     </div>
                     <textarea id="notif-edit-textarea" className="notif-edit-area" value={editingNotifText}
                       onChange={e => setEditingNotifText(e.target.value)} autoFocus/>
@@ -2224,6 +2254,9 @@ No preamble, no explanation — just the JSON.`
                   </div>
               }
               <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+                <button className="btn btn-ghost" style={{ flex: 1, fontSize: 13 }} onClick={() => refreshThreadSummary(contextPopupId, threads)} disabled={summarizing || !apiKey}>
+                  {summarizing ? '...' : '↻ Refresh'}
+                </button>
                 <button className="btn btn-ghost" style={{ flex: 1, fontSize: 13 }} onClick={() => { setContextPopupId(null); setEditTask({ ...tasks[contextPopupId], _exists: true }); }}>✏️ Edit in Task</button>
                 <button className="btn btn-ghost" style={{ flex: 1, fontSize: 13 }} onClick={() => setContextPopupId(null)}>Close</button>
               </div>
