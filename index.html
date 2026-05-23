@@ -261,6 +261,10 @@
     .notif-delete-btn:hover { color: #ef4444; }
     .notif-sent-time { font-size: 12px; color: #10b981; font-weight: 600; margin-top: 3px; }
     .notif-edit-area { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--accent); background: var(--bg); color: var(--text); font-size: 13px; resize: vertical; min-height: 120px; font-family: inherit; outline: none; line-height: 1.55; }
+    .notif-fmt-bar { display: flex; gap: 5px; margin-bottom: 6px; }
+    .fmt-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; padding: 3px 9px; font-size: 13px; cursor: pointer; color: var(--text); font-family: Georgia, serif; font-weight: 700; line-height: 1.4; transition: background 0.12s; }
+    .fmt-btn:hover { background: var(--accent); color: white; border-color: var(--accent); }
+    .fmt-btn-italic { font-style: italic; font-weight: 400; }
     .notif-time { font-size: 12px; color: var(--text2); font-weight: 500; }
     .notif-body { font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
     .notif-actions { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
@@ -1297,6 +1301,19 @@ No preamble, no explanation — just the JSON.`
       }
     };
 
+    const applyNotifFmt = (marker) => {
+      const el = document.getElementById('notif-edit-textarea');
+      if (!el) return;
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      const sel = editingNotifText.substring(start, end);
+      const before = editingNotifText.substring(0, start);
+      const after = editingNotifText.substring(end);
+      const next = before + marker + sel + marker + after;
+      setEditingNotifText(next);
+      setTimeout(() => { el.focus(); el.setSelectionRange(start + marker.length, end + marker.length); }, 0);
+    };
+
     const saveDecisionDraft = () => {
       if (!activeThread) return;
       const checked = Array.isArray(decisionDraft) ? decisionDraft.filter(i => i.checked) : [];
@@ -1506,7 +1523,7 @@ No preamble, no explanation — just the JSON.`
               <span>📋 Agenda active — reply with numbered answers · <em>Refresh if info is outdated</em></span>
               <div style={{display:'flex',gap:6,flexShrink:0}}>
                 <button className="banner-refresh-btn" onClick={refreshAgenda} disabled={aiLoading}>↻ Refresh</button>
-                <button className="banner-cancel-btn" onClick={() => setAgendaState(null)} disabled={aiLoading}>✕ Cancel</button>
+                <button className="banner-cancel-btn" onClick={() => { const sid = agendaState?.sessionId; if (sid) setChatHistory(prev => prev.filter(m => m._agendaSessionId !== sid)); setAgendaState(null); }} disabled={aiLoading}>✕ Cancel</button>
               </div>
             </div>
           )}
@@ -1515,7 +1532,7 @@ No preamble, no explanation — just the JSON.`
               <span>📊 {eodState.target === 'tarek' ? 'EOD: Tarek' : 'EOD: Symon'} — reply with numbered answers · <em>Refresh if info is outdated</em></span>
               <div style={{display:'flex',gap:6,flexShrink:0}}>
                 <button className="banner-refresh-btn" onClick={refreshEod} disabled={aiLoading}>↻ Refresh</button>
-                <button className="banner-cancel-btn" onClick={() => setEodState(null)} disabled={aiLoading}>✕ Cancel</button>
+                <button className="banner-cancel-btn" onClick={() => { const sid = eodState?.sessionId; if (sid) setChatHistory(prev => prev.filter(m => m._eodSessionId !== sid)); setEodState(null); }} disabled={aiLoading}>✕ Cancel</button>
               </div>
             </div>
           )}
@@ -1679,10 +1696,10 @@ No preamble, no explanation — just the JSON.`
                   ))}
                 </div>
               </div>
-              <span className="thread-mode-badge">{threadMode === 'log' ? '✏️ LOG' : '✨ AI ASSIST'}</span>
+              <span className="thread-mode-badge">{threadMode === 'log' ? 'LOG' : '✨ AI ASSIST'}</span>
               <button className="icon-btn" onClick={() => setEditTask({ ...task, _exists: true })} title="Edit task">✏️</button>
-              <button className="context-icon-btn" onClick={() => { setShowDecisionModal(true); handleSuggestClick(task); }} title="AI Suggest decision">🔮</button>
-              <button className="context-icon-btn" onClick={() => setContextPopupId(activeThread)} title="Current Summary">📝</button>
+              <button className="icon-btn" onClick={() => { setShowDecisionModal(true); handleSuggestClick(task); }} title="AI Suggest Decision">🔮</button>
+              <button className="icon-btn" onClick={() => setContextPopupId(activeThread)} title="Current Summary">📝</button>
             </div>
             <div className="thread-summary-block">
               <div className="thread-summary-hdr">
@@ -1739,24 +1756,34 @@ No preamble, no explanation — just the JSON.`
                 : decisionDraft !== null
                   ? <>
                       {decisionDraftQuestion && (
-                        <label className="decision-checkbox-item" style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
-                          <input type="checkbox" checked={decisionDraftQuestion.use}
-                            onChange={() => setDecisionDraftQuestion(prev => ({ ...prev, use: !prev.use }))}/>
-                          <span><strong style={{ color: '#8b5cf6' }}>Question: </strong>{decisionDraftQuestion.text}</span>
-                        </label>
+                        <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+                          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                            <input type="checkbox" checked={decisionDraftQuestion.use}
+                              onChange={() => setDecisionDraftQuestion(prev => ({ ...prev, use: !prev.use }))}
+                              style={{ marginTop: 6, flexShrink: 0 }}/>
+                            <div style={{ flex: 1 }}>
+                              <strong style={{ color: '#8b5cf6', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Question</strong>
+                              <input type="text" value={decisionDraftQuestion.text}
+                                onChange={e => setDecisionDraftQuestion(prev => ({ ...prev, text: e.target.value }))}
+                                style={{ display: 'block', width: '100%', marginTop: 4, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, fontFamily: 'inherit' }}/>
+                            </div>
+                          </div>
+                        </div>
                       )}
                       <div className="decision-checkbox-list">
                         {(Array.isArray(decisionDraft) ? decisionDraft : []).map((item, i) => (
                           <label key={i} className="decision-checkbox-item">
                             <input type="checkbox" checked={item.checked}
                               onChange={() => setDecisionDraft(prev => prev.map((it,idx) => idx===i ? {...it, checked: !it.checked} : it))}/>
-                            <span>{item.text}</span>
+                            <input type="text" value={item.text}
+                              onChange={e => setDecisionDraft(prev => prev.map((it,idx) => idx===i ? {...it, text: e.target.value} : it))}
+                              style={{ flex: 1, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, fontFamily: 'inherit' }}/>
                           </label>
                         ))}
                       </div>
                       <div className="decision-draft-btns">
-                        <button className="decision-draft-cancel" onClick={() => addMoreDecisionOptions(task)} disabled={decisionDraftLoading}>
-                          {decisionDraftLoading ? '...' : '➕ Add More'}
+                        <button className="decision-draft-cancel" onClick={() => setDecisionDraft(prev => Array.isArray(prev) ? [...prev, { text: '', checked: true }] : [{ text: '', checked: true }])}>
+                          ➕ Add More
                         </button>
                         <button className="decision-draft-save" onClick={saveDecisionDraft}
                           disabled={!Array.isArray(decisionDraft) || !decisionDraft.some(i => i.checked)}>Save Checked</button>
@@ -1818,7 +1845,6 @@ No preamble, no explanation — just the JSON.`
               <div className="thread-mode-row">
                 <button className={`thread-mode-btn ${threadMode==='log' ? 'active' : ''}`} onClick={() => setThreadMode('log')}>📝 Log</button>
                 <button className={`thread-mode-btn ${threadMode==='assist' ? 'active' : ''}`} onClick={() => setThreadMode('assist')}>✨ AI Assist</button>
-                <button className="thread-mode-btn" onClick={() => { setShowDecisionModal(true); handleSuggestClick(task); }}>🔮 AI Suggest</button>
               </div>
               <div className="thread-input-row">
                 <textarea ref={threadTextareaRef} className="thread-textarea" value={threadInput} onChange={e => setThreadInput(e.target.value)}
@@ -1948,7 +1974,11 @@ No preamble, no explanation — just the JSON.`
               </div>
               {editingNotifId === n.id
                 ? <>
-                    <textarea className="notif-edit-area" value={editingNotifText}
+                    <div className="notif-fmt-bar">
+                      <button type="button" className="fmt-btn" title="Bold" onMouseDown={e => { e.preventDefault(); applyNotifFmt('**'); }}>B</button>
+                      <button type="button" className="fmt-btn fmt-btn-italic" title="Italic" onMouseDown={e => { e.preventDefault(); applyNotifFmt('*'); }}>I</button>
+                    </div>
+                    <textarea id="notif-edit-textarea" className="notif-edit-area" value={editingNotifText}
                       onChange={e => setEditingNotifText(e.target.value)} autoFocus/>
                     <div className="notif-actions">
                       <button className="notif-action-btn" style={{background:'var(--accent)',color:'white',borderColor:'var(--accent)'}}
@@ -2092,7 +2122,7 @@ No preamble, no explanation — just the JSON.`
             <div className="modal" style={{ maxHeight: '80vh' }}>
               <div className="modal-handle"/>
               <div className="modal-hdr">
-                <span className="modal-hdr-title">🔮 Decision</span>
+                <span className="modal-hdr-title">🔮 AI Suggest Decision</span>
                 <button className="icon-btn" onClick={() => { setShowDecisionModal(false); setDecisionDraft(null); setDecisionDraftQuestion(null); setConfirmDecisionReplace(false); }}>×</button>
               </div>
               {confirmDecisionReplace
@@ -2132,25 +2162,35 @@ No preamble, no explanation — just the JSON.`
                     {!decisionDraftLoading && decisionDraft !== null && (
                       <>
                         {decisionDraftQuestion && (
-                          <label className="decision-checkbox-item" style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
-                            <input type="checkbox" checked={decisionDraftQuestion.use}
-                              onChange={() => setDecisionDraftQuestion(prev => ({ ...prev, use: !prev.use }))}/>
-                            <span><strong style={{ color: '#8b5cf6' }}>Question: </strong>{decisionDraftQuestion.text}</span>
-                          </label>
+                          <div style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                              <input type="checkbox" checked={decisionDraftQuestion.use}
+                                onChange={() => setDecisionDraftQuestion(prev => ({ ...prev, use: !prev.use }))}
+                                style={{ marginTop: 6, flexShrink: 0 }}/>
+                              <div style={{ flex: 1 }}>
+                                <strong style={{ color: '#8b5cf6', fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Question</strong>
+                                <input type="text" value={decisionDraftQuestion.text}
+                                  onChange={e => setDecisionDraftQuestion(prev => ({ ...prev, text: e.target.value }))}
+                                  style={{ display: 'block', width: '100%', marginTop: 4, padding: '6px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, fontFamily: 'inherit' }}/>
+                              </div>
+                            </div>
+                          </div>
                         )}
                         <div className="decision-checkbox-list">
                           {(Array.isArray(decisionDraft) ? decisionDraft : []).map((item, i) => (
                             <label key={i} className="decision-checkbox-item">
                               <input type="checkbox" checked={item.checked}
                                 onChange={() => setDecisionDraft(prev => prev.map((it, idx) => idx === i ? { ...it, checked: !it.checked } : it))}/>
-                              <span>{item.text}</span>
+                              <input type="text" value={item.text}
+                                onChange={e => setDecisionDraft(prev => prev.map((it, idx) => idx === i ? { ...it, text: e.target.value } : it))}
+                                style={{ flex: 1, padding: '4px 8px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg)', color: 'var(--text)', fontSize: 13, fontFamily: 'inherit' }}/>
                             </label>
                           ))}
                         </div>
                         <div className="decision-draft-btns" style={{ marginTop: 14 }}>
                           <button className="decision-draft-cancel"
-                            onClick={() => addMoreDecisionOptions(tasks[activeThread])}
-                            disabled={decisionDraftLoading}>➕ Add More</button>
+                            onClick={() => setDecisionDraft(prev => Array.isArray(prev) ? [...prev, { text: '', checked: true }] : [{ text: '', checked: true }])}>
+                            ➕ Add More</button>
                           <button className="decision-draft-save"
                             onClick={() => { saveDecisionDraft(); setShowDecisionModal(false); }}
                             disabled={!Array.isArray(decisionDraft) || !decisionDraft.some(i => i.checked)}>Save Checked</button>
