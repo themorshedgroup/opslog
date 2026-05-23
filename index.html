@@ -66,6 +66,10 @@
     .chat-msg.sys { background: var(--surface2); color: var(--text2); align-self: center; font-size: 12px; border-radius: 8px; padding: 7px 12px; max-width: 100%; text-align: center; }
     .chat-input-area { background: var(--bg); border-top: 1px solid var(--border); padding: 10px 14px 14px; flex-shrink: 0; }
     .eod-banner { background: var(--eod-bg); border: 1px solid var(--eod-color); border-radius: 8px; padding: 7px 12px; margin-bottom: 8px; font-size: 12px; color: var(--eod-color); font-weight: 600; text-align: center; }
+    .eod-banner.banner-with-refresh { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; }
+    .banner-refresh-btn { background: none; border: 1px solid currentColor; border-radius: 5px; color: inherit; font-size: 11px; font-weight: 700; padding: 2px 8px; cursor: pointer; opacity: 0.8; white-space: nowrap; transition: opacity 0.15s; flex-shrink: 0; }
+    .banner-refresh-btn:hover { opacity: 1; }
+    .banner-refresh-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 9px; }
     .pill { padding: 6px 13px; border-radius: 20px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 12px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.12s; }
     .pill:active { transform: scale(0.94); }
@@ -185,10 +189,24 @@
     .update-ai-tag { background: rgba(59,130,246,0.18); color: #3b82f6; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 4px; margin-left: 6px; }
     .thread-copy-btn { margin-top: 6px; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 11px; cursor: pointer; transition: all 0.15s; display: inline-block; }
     .thread-copy-btn:hover { background: var(--surface2); }
+    /* Entry edit/delete actions */
+    .entry-actions { display: flex; gap: 6px; margin-top: 6px; flex-wrap: wrap; }
+    .entry-action-btn { padding: 2px 7px; border-radius: 5px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 11px; cursor: pointer; transition: all 0.15s; }
+    .entry-action-btn:hover { background: var(--surface2); }
+    .entry-action-btn.danger:hover { color: #ef4444; border-color: #ef4444; }
+    .entry-edit-area { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--accent); background: var(--bg); color: var(--text); font-size: 14px; resize: vertical; min-height: 60px; font-family: inherit; outline: none; margin-top: 4px; }
     /* Thread card footer */
     .thread-card-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; }
     .gmail-card-btn { background: none; border: none; cursor: pointer; padding: 2px 3px; border-radius: 4px; line-height: 1; display: inline-flex; align-items: center; transition: opacity 0.15s; }
     .gmail-card-btn:hover { opacity: 0.8; }
+    /* Context icon button (board cards + thread header) */
+    .context-icon-btn { background: none; border: none; cursor: pointer; padding: 2px 4px; font-size: 14px; color: var(--text2); border-radius: 5px; transition: color 0.15s, background 0.15s; flex-shrink: 0; line-height: 1; }
+    .context-icon-btn:hover { color: var(--accent); background: var(--surface2); }
+    /* Thread source tags on cards */
+    .thread-source-tag { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 4px; }
+    .thread-source-tag.eod-tag    { background: var(--eod-bg); color: var(--eod-color); }
+    .thread-source-tag.agenda-tag { background: #fff8e7; color: #b45309; }
+    html.dark .thread-source-tag.agenda-tag { background: #2d1f00; color: #fcd34d; }
     /* Gmail button in chat */
     .gmail-chat-btn { margin-top: 6px; padding: 5px 12px; border-radius: 8px; border: 1px solid #ea4335; background: none; color: #ea4335; font-size: 12px; font-weight: 600; cursor: pointer; transition: background 0.15s; display: inline-block; }
     .gmail-chat-btn:hover { background: rgba(234,67,53,0.08); }
@@ -196,6 +214,8 @@
     .thread-mode-row { display: flex; gap: 6px; margin-bottom: 8px; }
     .thread-mode-btn { flex: 1; padding: 7px 0; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); color: var(--text2); font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.15s; }
     .thread-mode-btn.active { background: var(--accent); border-color: var(--accent); color: #1a1a1a; }
+    /* Mode badge in sticky header */
+    .thread-mode-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 10px; background: var(--surface2); color: var(--text2); border: 1px solid var(--border); white-space: nowrap; transition: all 0.15s; flex-shrink: 0; }
 
     /* Thread overview summary */
     .thread-summary-block { background: var(--surface); border-radius: 12px; padding: 12px 14px; margin-bottom: 14px; border: 1px solid var(--border); }
@@ -235,7 +255,13 @@
     .notifs-wrap { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
     .notif-card { background: var(--surface); border-radius: 12px; padding: 14px; border: 1px solid var(--border); transition: opacity 0.3s; }
     .notif-card.is-read { opacity: 0.45; }
-    .notif-time { font-size: 12px; color: var(--text2); margin-bottom: 9px; font-weight: 500; }
+    .notif-card.is-sent { opacity: 0.65; }
+    .notif-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .notif-delete-btn { background: none; border: none; color: var(--text2); font-size: 18px; cursor: pointer; padding: 0 2px; line-height: 1; transition: color 0.15s; flex-shrink: 0; margin-left: 8px; margin-top: -2px; }
+    .notif-delete-btn:hover { color: #ef4444; }
+    .notif-sent-time { font-size: 12px; color: #10b981; font-weight: 600; margin-top: 3px; }
+    .notif-edit-area { width: 100%; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--accent); background: var(--bg); color: var(--text); font-size: 13px; resize: vertical; min-height: 120px; font-family: inherit; outline: none; line-height: 1.55; }
+    .notif-time { font-size: 12px; color: var(--text2); font-weight: 500; }
     .notif-body { font-size: 14px; line-height: 1.55; white-space: pre-wrap; }
     .notif-actions { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
     .notif-action-btn { padding: 6px 13px; border-radius: 8px; border: 1px solid var(--border); background: none; color: var(--text2); font-size: 12px; font-weight: 500; cursor: pointer; }
@@ -270,6 +296,37 @@
     .mic-btn.listening { background: var(--danger); color: white; animation: pulse 1s ease-in-out infinite; }
     @keyframes pulse { 0%,100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.12); opacity: 0.85; } }
     .empty-state { text-align: center; color: var(--text2); font-size: 13px; padding: 30px 16px; }
+
+    /* Labels (Change 1) */
+    .board-groupby-select { padding: 6px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: 12px; font-weight: 500; cursor: pointer; }
+    .label-chip-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .label-chip-toggle { padding: 5px 12px; border-radius: 20px; border: 1px solid var(--lbl-color, var(--border)); background: none; color: var(--text); font-size: 12px; cursor: pointer; transition: all 0.12s; }
+    .label-chip-toggle.selected { background: var(--lbl-color, var(--accent)); color: white; font-weight: 600; }
+    .task-label-chips { display: flex; gap: 4px; flex-wrap: wrap; margin-top: 4px; }
+    .task-label-chip { font-size: 10px; font-weight: 600; padding: 1px 7px; border-radius: 10px; }
+
+    /* Cancel button on banners (Change 3) */
+    .banner-cancel-btn { background: none; border: 1px solid currentColor; border-radius: 5px; color: inherit; font-size: 11px; font-weight: 700; padding: 2px 8px; cursor: pointer; opacity: 0.65; white-space: nowrap; transition: opacity 0.15s; flex-shrink: 0; }
+    .banner-cancel-btn:hover { opacity: 1; }
+    .banner-cancel-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+    /* Done threads section (Change 5) */
+    .done-threads-section { border-top: 1px solid var(--border); margin-top: 8px; padding-top: 8px; }
+    .done-threads-toggle { width: 100%; text-align: left; padding: 10px 14px; background: none; border: none; color: var(--text2); font-size: 13px; font-weight: 600; cursor: pointer; }
+    .done-threads-toggle:hover { color: var(--text); }
+
+    /* Decision carousel (Change 6) */
+    .decision-carousel { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px; margin: 4px 0; }
+    .decision-carousel-header { font-size: 11px; color: var(--text2); font-weight: 600; margin-bottom: 8px; }
+    .decision-carousel-title { font-weight: 700; font-size: 15px; margin-bottom: 4px; }
+    .decision-carousel-question { font-size: 13px; color: var(--text2); margin-bottom: 10px; font-style: italic; }
+    .decision-option-chip { display: inline-flex; align-items: center; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; cursor: pointer; margin: 3px; transition: all 0.12s; }
+    .decision-option-chip.selected { background: var(--accent); color: white; border-color: var(--accent); font-weight: 600; }
+    .decision-carousel-submit { padding: 8px 18px; background: var(--accent); color: white; border: none; border-radius: 8px; font-weight: 700; font-size: 13px; cursor: pointer; transition: opacity 0.15s; }
+    .decision-carousel-submit:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* Overview block (Change 2 - Notes in thread view) */
+    .overview-block { background: var(--surface); border-radius: 10px; padding: 10px 12px; border: 1px solid var(--border); }
   </style>
 </head>
 <body>
@@ -285,10 +342,10 @@
     '#14b8a6','#a855f7','#06b6d4','#84cc16'
   ];
 
-  const DEFAULT_CATEGORIES = [
-    { id: 'todo',     label: 'To Do',    color: '#f59e0b' },
-    { id: 'decision', label: 'Decision', color: '#8b5cf6' },
-    { id: 'done',     label: 'Done',     color: '#10b981' }
+  const DEFAULT_LABELS = [
+    { id: 'urgent', label: 'Urgent',       color: '#ef4444' },
+    { id: 'normal', label: 'Normal',       color: '#f59e0b' },
+    { id: 'low',    label: 'Low Priority', color: '#10b981' },
   ];
 
   const STATUS_OPTIONS = [
@@ -369,38 +426,38 @@
     catch { const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); }
   };
 
-  // ─── Category Settings Modal ─────────────────────────────────────────────────
-  function CategorySettingsModal({ categories, onSave, onClose }) {
-    const [draft, setDraft] = useState(categories.map(c => ({ ...c })));
+  // ─── Label Settings Modal ─────────────────────────────────────────────────────
+  function LabelSettingsModal({ labels, onSave, onClose }) {
+    const [draft, setDraft] = useState(labels.map(l => ({ ...l })));
 
-    const update = (id, field, val) => setDraft(prev => prev.map(c => c.id === id ? { ...c, [field]: val } : c));
-    const addCat = () => setDraft(prev => [...prev, { id: uid(), label: 'New Category', color: '#6b7280' }]);
-    const delCat = (id) => { if (draft.length <= 1) return; setDraft(prev => prev.filter(c => c.id !== id)); };
+    const update = (id, field, val) => setDraft(prev => prev.map(l => l.id === id ? { ...l, [field]: val } : l));
+    const addLabel = () => setDraft(prev => [...prev, { id: uid(), label: 'New Label', color: '#6b7280' }]);
+    const delLabel = (id) => { if (draft.length <= 1) return; setDraft(prev => prev.filter(l => l.id !== id)); };
 
     return (
       <div className="overlay" onClick={e => { if (e.target.classList.contains('overlay')) onClose(); }}>
         <div className="modal">
           <div className="modal-handle"/>
           <div className="modal-hdr">
-            <span className="modal-hdr-title">⚙️ Board Categories</span>
+            <span className="modal-hdr-title">⚙️ Manage Labels</span>
             <button className="icon-btn" onClick={onClose}>×</button>
           </div>
-          {draft.map(cat => (
-            <div key={cat.id} className="cat-row">
+          {draft.map(lbl => (
+            <div key={lbl.id} className="cat-row">
               <div className="cat-row-top">
-                <div className="cat-color-preview" style={{ background: cat.color }}/>
-                <input className="cat-name-inp" value={cat.label} onChange={e => update(cat.id, 'label', e.target.value)} placeholder="Category name"/>
-                <button className="cat-delete-btn" onClick={() => delCat(cat.id)} title="Delete category">×</button>
+                <div className="cat-color-preview" style={{ background: lbl.color }}/>
+                <input className="cat-name-inp" value={lbl.label} onChange={e => update(lbl.id, 'label', e.target.value)} placeholder="Label name"/>
+                <button className="cat-delete-btn" onClick={() => delLabel(lbl.id)} title="Delete label">×</button>
               </div>
               <div className="color-swatches">
                 {COLOR_PALETTE.map(color => (
-                  <button key={color} className={`color-swatch ${cat.color === color ? 'selected' : ''}`}
-                    style={{ background: color }} onClick={() => update(cat.id, 'color', color)}/>
+                  <button key={color} className={`color-swatch ${lbl.color === color ? 'selected' : ''}`}
+                    style={{ background: color }} onClick={() => update(lbl.id, 'color', color)}/>
                 ))}
               </div>
             </div>
           ))}
-          <button className="add-cat-btn" onClick={addCat}>+ Add Category</button>
+          <button className="add-cat-btn" onClick={addLabel}>+ Add Label</button>
           <div className="btn-row">
             <button className="btn btn-primary" onClick={() => onSave(draft)}>Save Changes</button>
             <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
@@ -411,7 +468,7 @@
   }
 
   // ─── Task Modal ───────────────────────────────────────────────────────────────
-  function TaskModal({ task, categories, onSave, onDelete, onClose }) {
+  function TaskModal({ task, labels, onSave, onDelete, onClose }) {
     const isNew = !task._exists;
     const [form, setForm] = useState({ ...task });
     const set = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }));
@@ -429,10 +486,20 @@
             <input className="form-inp" value={form.title || ''} onChange={set('title')} placeholder="What needs to be done?" autoFocus={isNew}/>
           </div>
           <div className="form-group">
-            <label className="form-lbl">Category</label>
-            <select className="form-sel" value={form.category || categories[0]?.id || 'todo'} onChange={set('category')}>
-              {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-            </select>
+            <label className="form-lbl">Labels</label>
+            <div className="label-chip-row">
+              {labels.map(lbl => (
+                <button key={lbl.id} type="button"
+                  className={`label-chip-toggle ${(form.labels||[]).includes(lbl.id) ? 'selected' : ''}`}
+                  style={{'--lbl-color': lbl.color}}
+                  onClick={() => {
+                    const cur = form.labels || [];
+                    setForm(p => ({ ...p, labels: cur.includes(lbl.id) ? cur.filter(x => x !== lbl.id) : [...cur, lbl.id] }));
+                  }}>
+                  {lbl.label}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="form-group">
             <label className="form-lbl">Due Date *</label>
@@ -445,8 +512,12 @@
             </select>
           </div>
           <div className="form-group">
-            <label className="form-lbl">Notes</label>
-            <textarea className="form-ta" value={form.notes || ''} onChange={set('notes')} placeholder="Additional context..."/>
+            <label className="form-lbl">Notes <span style={{fontSize:11,color:'var(--text2)',fontWeight:400}}>— manual, never auto-updated</span></label>
+            <textarea className="form-ta" value={form.notes||''} onChange={set('notes')} placeholder="Background info, initial brief..." rows={3}/>
+          </div>
+          <div className="form-group">
+            <label className="form-lbl">Context</label>
+            <textarea className="form-ta" value={form.context || ''} onChange={set('context')} placeholder="Background info and context — auto-updated from thread activity..."/>
           </div>
           <div className="form-group">
             <label className="form-lbl">Decision Question</label>
@@ -490,8 +561,20 @@
     const [model,         setModel]         = useState(() => ls.get('ol-mdl', DEFAULT_MODEL));
     const [apiKey,        setApiKey]        = useState(() => ls.get('ol-key', ''));
     const [apiKeyDraft,   setApiKeyDraft]   = useState(() => ls.get('ol-key', ''));
-    const [categories,    setCategories]    = useState(() => ls.get('ol-cats', DEFAULT_CATEGORIES));
-    const [tasks,         setTasks]         = useState(() => ls.get('ol-tasks', {}));
+    const [labels,        setLabels]        = useState(() => ls.get('ol-labels', ls.get('ol-cats', DEFAULT_LABELS)));
+    const [tasks,         setTasks]         = useState(() => {
+      const saved = ls.get('ol-tasks', {});
+      const migrated = {};
+      Object.entries(saved).forEach(([id, t]) => {
+        migrated[id] = {
+          ...t,
+          context: t.context ?? t.notes ?? '',
+          notes: t.notes || '',
+          labels: t.labels || [],
+        };
+      });
+      return migrated;
+    });
     const [threads,       setThreads]       = useState(() => ls.get('ol-threads', {}));
     const [chatHistory,   setChatHistory]   = useState(() => ls.get('ol-ch', []));
     const [notifications, setNotifications] = useState(() => ls.get('ol-notifs', []));
@@ -513,13 +596,22 @@
     const [threadSort,     setThreadSort]     = useState({ by: 'lastUpdate', dir: 'desc' });
     const [threadAiLoading,setThreadAiLoading]= useState(false);
     const [collapsedCols,  setCollapsedCols]  = useState({});
+    const [boardGroupBy,   setBoardGroupBy]   = useState('status');
+    const [showDoneThreads,setShowDoneThreads]= useState(false);
+    const [decisionOptionsState, setDecisionOptionsState] = useState(null);
     const [copiedId,       setCopiedId]       = useState(null);
     const [isListening,    setIsListening]    = useState(false);
     const [decisionDraft,         setDecisionDraft]         = useState(null);
     const [decisionDraftQuestion, setDecisionDraftQuestion] = useState(null);
     const [decisionDraftLoading,  setDecisionDraftLoading]  = useState(false);
+    const [confirmDecisionReplace, setConfirmDecisionReplace] = useState(false);
     const [summarizing,    setSummarizing]    = useState(false);
     const [speechSupported, setSpeechSupported] = useState(false);
+    const [editingEntryId,   setEditingEntryId]   = useState(null);
+    const [editingEntryText, setEditingEntryText] = useState('');
+    const [editingNotifId,   setEditingNotifId]   = useState(null);
+    const [editingNotifText, setEditingNotifText] = useState('');
+    const [contextPopupId,   setContextPopupId]   = useState(null);
     const recognitionRef   = useRef(null);
     const lastSpeechRef    = useRef(0);     // timestamp of last detected speech
     const manualStopRef    = useRef(false); // true when user tapped stop
@@ -532,7 +624,7 @@
     const decisionBlockRef  = useRef(null);
 
     // Persist
-    useEffect(() => ls.set('ol-cats',    categories),    [categories]);
+    useEffect(() => ls.set('ol-labels',  labels),        [labels]);
     useEffect(() => ls.set('ol-tasks',   tasks),         [tasks]);
     useEffect(() => ls.set('ol-threads', threads),       [threads]);
     useEffect(() => ls.set('ol-ch',      chatHistory),   [chatHistory]);
@@ -618,25 +710,29 @@
       el.style.height = 'auto';
       el.style.height = Math.min(el.scrollHeight, 200) + 'px';
     }, [threadInput]);
-    useEffect(() => { setDecisionDraft(null); setDecisionDraftLoading(false); setSummarizing(false); setThreadMode('log'); setThreadAiLoading(false); }, [activeThread]);
+    useEffect(() => { setDecisionDraft(null); setDecisionDraftLoading(false); setConfirmDecisionReplace(false); setSummarizing(false); setThreadMode('log'); setThreadAiLoading(false); setEditingEntryId(null); setEditingEntryText(''); }, [activeThread]);
 
-    const unreadCount = notifications.filter(n => !n.read).length;
+    const unreadCount = notifications.filter(n => !n.sent && !n.read).length;
+
+    const fmtSent = (iso) => {
+      if (!iso) return '';
+      const d = new Date(iso);
+      return d.toLocaleString('en-US', { timeZone: 'America/Chicago', month: '2-digit', day: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false }).replace(',', ' -');
+    };
 
     // ── AI helpers
-    const getCatLabel = (id) => categories.find(c => c.id === id)?.label || id;
+    const getLabelNames = (ids) => (ids||[]).map(id => labels.find(l => l.id === id)?.label || id).filter(Boolean).join(', ');
 
     const getBoardState = useCallback(() => {
       const list = Object.values(tasks);
       if (!list.length) return 'Board is empty.';
-      const byCat = {};
-      categories.forEach(c => { byCat[c.id] = []; });
-      list.forEach(t => { if (byCat[t.category] !== undefined) byCat[t.category].push(t); else (byCat['_other'] = byCat['_other']||[]).push(t); });
-      return categories.map(c => {
-        const catTasks = byCat[c.id] || [];
-        const lines = catTasks.length ? catTasks.map(t => `  [${t.id}] "${t.title}" | Due: ${t.dueDate||'NONE'} | Status: ${t.status}`).join('\n') : '  (empty)';
-        return `${c.label.toUpperCase()}:\n${lines}`;
+      const byStatus = { open: [], 'in-progress': [], decision: [], done: [] };
+      list.forEach(t => { (byStatus[t.status] = byStatus[t.status]||[]).push(t); });
+      return Object.entries(byStatus).map(([st, stTasks]) => {
+        const lines = stTasks.length ? stTasks.map(t => `  [${t.id}] "${t.title}" | Due: ${t.dueDate||'NONE'}${(t.labels||[]).length ? ' | Labels: '+getLabelNames(t.labels) : ''}${t.notes ? ' | Notes: '+t.notes : ''}`).join('\n') : '  (empty)';
+        return `${st.toUpperCase()}:\n${lines}`;
       }).join('\n\n');
-    }, [tasks, categories]);
+    }, [tasks, labels]);
 
     const getThreadLog = (taskId) => {
       const thread = threads[taskId];
@@ -650,8 +746,6 @@
       return thread.messages.map(m => `[${fmtTime(m.timestamp)}][${m.source?.toUpperCase()||'LOG'}] ${m.content}`).join('\n');
     };
 
-    const catIds = categories.map(c => `"${c.id}"`).join('|');
-
     const systemPrompt = useCallback(() =>
       `You are OpsLog AI, a professional operations assistant for Symon, an Operations Manager reporting to his boss Tarek.
 
@@ -660,8 +754,8 @@ Your job: help Symon track tasks, log updates, and generate concise executive su
 ## Current Board State
 ${getBoardState()}
 
-## Available Categories (columns)
-${categories.map(c => `- ${c.id}: ${c.label}`).join('\n')}
+## Available Labels
+${labels.map(l => `- ${l.id}: ${l.label}`).join('\n')}
 
 ## Task Status Options
 open | in-progress | decision | done
@@ -677,10 +771,10 @@ open | in-progress | decision | done
 ACTION:{"type":"TYPE","payload":{...}}
 
 ## ACTION Types
-- ADD:    payload = { title, category (one of: ${catIds}), dueDate ("YYYY-MM-DD"), notes, status ("open"|"in-progress"|"decision"|"done"), decisionQuestion? (what needs to be decided), decisionOptions? (numbered options if obvious) }
-- EDIT:   payload = { id, changes: { title?, category?, dueDate?, notes?, status?, decisionQuestion?, decisionOptions? } }
+- ADD:    payload = { title, labels? (array of label ids from: ${labels.map(l => `"${l.id}"`).join('|')} — auto-assign if urgency is obvious, otherwise []), dueDate ("YYYY-MM-DD"), context (initial brief — stored as Notes on the task; use for background info), status ("open"|"in-progress"|"decision"|"done"), decisionQuestion? (what needs to be decided), decisionOptions? (numbered options if obvious), decisionMaker? ("tarek"|"symon"|"" — who needs to decide) }
+- EDIT:   payload = { id, changes: { title?, labels?, dueDate?, context?, status?, decisionQuestion?, decisionOptions? } }
 - DELETE: payload = { id }
-- NONE:   payload = {}`, [getBoardState, categories]);
+- NONE:   payload = {}`, [getBoardState, labels]);
 
     const callAI = async (messages, sysOverride) => {
       if (!apiKey) throw new Error('No API key — go to Settings to add your Anthropic API key.');
@@ -702,7 +796,21 @@ ACTION:{"type":"TYPE","payload":{...}}
         const { type, payload } = JSON.parse(match[1]);
         if (type === 'ADD') {
           const id = uid();
-          nextTasks[id] = { id, title: payload.title, category: payload.category || categories[0]?.id || 'todo', dueDate: payload.dueDate, notes: payload.notes||'', status: payload.status||'open', decisionQuestion: payload.decisionQuestion||'', decisionOptions: payload.decisionOptions||'', decisionMaker: payload.decisionMaker||'', email: payload.email||'', createdAt: now(), updatedAt: now() };
+          nextTasks[id] = {
+            id,
+            title: payload.title,
+            labels: payload.labels || [],
+            dueDate: payload.dueDate,
+            notes: payload.context || payload.notes || '',
+            context: '',
+            status: payload.status||'open',
+            decisionQuestion: payload.decisionQuestion||'',
+            decisionOptions: payload.decisionOptions||'',
+            decisionMaker: payload.decisionMaker||'',
+            email: payload.email||'',
+            createdAt: now(),
+            updatedAt: now()
+          };
           if (!nextThreads[id]) nextThreads[id] = { messages: [] };
         } else if (type === 'EDIT') {
           if (nextTasks[payload.id]) nextTasks[payload.id] = { ...nextTasks[payload.id], ...payload.changes, updatedAt: now() };
@@ -745,51 +853,54 @@ ACTION:{"type":"TYPE","payload":{...}}
     };
 
     // ── EOD
+    // PURPOSE: End-of-day summary tool. Generates numbered questions, logs answers to threads,
+    // and produces a formatted notification for Tarek or Symon (depending on target).
+    // SYMMETRY NOTE: EOD and Agenda share the same question→answer→log pattern.
+    // Any session handling, banner logic, or routing changes made here MUST be mirrored
+    // in the Agenda workflow (startAgenda / handleAgendaResponse) and vice versa.
     const startEod = async (target) => {
       if (aiLoading) return;
       const openTasks = Object.values(tasks).filter(t => t.status !== 'done');
       if (!openTasks.length) { setChatHistory(prev => [...prev, { role: 'assistant', content: 'No open tasks.', _show: 'No open tasks to review right now.' }]); return; }
       const label = target === 'tarek' ? 'EOD: Tarek' : 'EOD: Symon';
-      setChatHistory(prev => [...prev, { role: 'user', content: label, _show: `📊 ${label}` }]);
+      const sessionId = uid();
+      setChatHistory(prev => [...prev, { role: 'user', content: label, _show: `📊 ${label}`, _eodSessionId: sessionId }]);
       setAiLoading(true);
       try {
         const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
         const taskLines = openTasks.map((t, i) =>
-          `${i+1}. **${t.title}** (Due: ${fmtDate(t.dueDate)||'No date'} · Status: ${t.status} · Category: ${getCatLabel(t.category)})${t.decisionQuestion ? `\n   Decision Question: ${t.decisionQuestion}` : ''}${t.decisionOptions ? `\n   Options: ${t.decisionOptions}` : ''}\n   Thread log: ${getThreadLog(t.id)}`
+          `${i+1}. **${t.title}** (Due: ${fmtDate(t.dueDate)||'No date'} · Status: ${t.status}${(t.labels||[]).length ? ' · Labels: '+getLabelNames(t.labels) : ''})${t.decisionQuestion ? `\n   Decision Question: ${t.decisionQuestion}` : ''}${t.decisionOptions ? `\n   Options: ${t.decisionOptions}` : ''}${t.notes ? `\n   Notes: ${t.notes}` : ''}\n   Context: ${t.context || getThreadLog(t.id)}`
         ).join('\n\n');
         const aiText = await callAI(
           [{ role: 'user', content: `Today is ${today}. Ask Symon for a brief status update on each open task. Number each question. Tell him to reply with numbered answers.\n\nOpen tasks:\n${taskLines}` }],
           `You are OpsLog AI conducting an EOD check-in. Ask concise numbered questions about each task's status. Be professional and brief.`
         );
-        setEodState({ tasks: openTasks, step: 'asked', target });
-        setChatHistory(prev => [...prev, { role: 'assistant', content: aiText, _show: aiText }]);
+        setEodState({ tasks: openTasks, step: 'asked', target, sessionId });
+        setChatHistory(prev => [...prev, { role: 'assistant', content: aiText, _show: aiText, _eodSessionId: sessionId }]);
       } catch (e) {
         setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
       } finally { setAiLoading(false); }
     };
 
-    const handleEodResponse = async (responseText) => {
+    const refreshEod = () => {
+      if (aiLoading || !eodState) return;
+      const target = eodState.target;
+      const sid = eodState.sessionId;
+      setChatHistory(prev => prev.filter(m => m._eodSessionId !== sid));
+      setEodState(null);
+      startEod(target);
+    };
+
+    const refreshAgenda = () => {
+      if (aiLoading || !agendaState) return;
+      const sid = agendaState.sessionId;
+      setChatHistory(prev => prev.filter(m => m._agendaSessionId !== sid));
+      setAgendaState(null);
+      startAgenda();
+    };
+
+    const finalizeEod = async (target, eodTasks, numbered, todayStr, today) => {
       try {
-        const numbered = parseNumbered(responseText);
-        const eodTasks = eodState.tasks;
-        const nextThreads = { ...threads };
-
-        // Log numbered answers to respective task threads
-        Object.entries(numbered).forEach(([numStr, updateText]) => {
-          const idx = parseInt(numStr) - 1;
-          if (idx >= 0 && idx < eodTasks.length) {
-            const task = eodTasks[idx];
-            if (!nextThreads[task.id]) nextThreads[task.id] = { messages: [] };
-            nextThreads[task.id].messages.push({ id: uid(), content: updateText, timestamp: now(), source: 'eod' });
-          }
-        });
-        setThreads(nextThreads);
-        setEodState(null);
-
-        const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-        const todayStr = new Date().toISOString().slice(0, 10);
-
-        const target = eodState.target;
         const targetLabel = target === 'tarek' ? 'Tarek (CEO)' : 'Symon (Operations Manager)';
 
         // SECTION 1 — Accomplishments: done tasks created/updated today
@@ -798,13 +909,17 @@ ACTION:{"type":"TYPE","payload":{...}}
           (t.updatedAt?.slice(0,10) === todayStr || t.createdAt?.slice(0,10) === todayStr)
         );
         const accomplishLines = todayDone.length
-          ? todayDone.map(t => `• ${t.title}${t.notes ? ' — ' + t.notes : ''}`).join('\n')
+          ? todayDone.map(t => `• ${t.title}${t.context ? ' — ' + t.context : ''}`).join('\n')
           : 'None';
 
-        // SECTION 2 — Task Updates: all open tasks, bold title
+        // SECTION 2 — Task Updates: EOD answer + full context for each task
         const taskUpdateLines = eodTasks.map((t, i) => {
           const upd = numbered[i + 1];
-          return `• **${t.title}** — ${upd || t.notes || t.status}`;
+          const ctx = t.context;
+          let line = `• **${t.title}**`;
+          line += `\n   EOD answer: ${upd || '(no update given)'}`;
+          if (ctx) line += `\n   Context: ${ctx}`;
+          return line;
         }).join('\n');
 
         // SECTION 3 — Decisions: open tasks with decisionQuestion + decisionOptions filtered by target decision maker
@@ -831,17 +946,94 @@ ACTION:{"type":"TYPE","payload":{...}}
 
         const summary = await callAI(
           [{ role: 'user', content: `Date: ${today}\nFor: ${targetLabel}\n\n${promptParts}\n\nFormat exactly as shown — keep bold titles (**title**), bullet points (•), and A/B/C options. Start with "EOD Update — ${today}". No greetings, no closing lines.` }],
-          `You are OpsLog AI. Reproduce the EOD sections exactly as given. Preserve bold formatting, bullet points, and A/B/C decision options. Be concise.`
+          `You are OpsLog AI. Format a professional EOD report. For each task in Task Updates, synthesize the EOD answer and Context into one clear, concise update sentence per task. Preserve bold task titles (**title**), bullet points (•), and A/B/C decision options. No extra commentary.`
         );
 
-        setNotifications(prev => [{ id: uid(), content: summary, timestamp: now(), read: false }, ...prev]);
+        setNotifications(prev => [{ id: uid(), content: summary, timestamp: now(), sent: false, sentAt: null }, ...prev]);
         setChatHistory(prev => [...prev, { role: 'assistant', content: summary, _show: `✅ Updates saved to threads. EOD summary added to Notifications.\n\n${summary}` }]);
       } catch (e) {
         setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
       }
     };
 
+    const handleEodResponse = async (responseText) => {
+      try {
+        const numbered = parseNumbered(responseText);
+        if (Object.keys(numbered).length === 0) {
+          setChatHistory(prev => [...prev, { role: 'assistant', content: "⚠️ I couldn't find any numbered answers. Please reply with numbered responses — e.g.:\n`1. sent follow-up email 2. waiting on approval 3. scheduled for Monday`", _show: "⚠️ I couldn't find any numbered answers. Please reply with numbered responses — e.g.:\n`1. sent follow-up email 2. waiting on approval 3. scheduled for Monday`" }]);
+          return; // Keep eodState active — user can retry
+        }
+        const eodTasks = eodState.tasks;
+        const nextThreads = { ...threads };
+
+        // Log numbered answers to respective task threads
+        Object.entries(numbered).forEach(([numStr, updateText]) => {
+          const idx = parseInt(numStr) - 1;
+          if (idx >= 0 && idx < eodTasks.length) {
+            const task = eodTasks[idx];
+            if (!nextThreads[task.id]) nextThreads[task.id] = { messages: [] };
+            nextThreads[task.id].messages.push({ id: uid(), content: updateText, timestamp: now(), source: 'eod' });
+          }
+        });
+        setThreads(nextThreads);
+
+        const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const target = eodState.target;
+
+        setEodState(null);
+
+        // Check for tasks needing decision options
+        const missingOptions = eodTasks.filter(t =>
+          t.decisionQuestion && t.decisionMaker === target && !t.decisionOptions
+        );
+
+        if (missingOptions.length > 0) {
+          setAiLoading(true);
+          try {
+            const cards = await Promise.all(missingOptions.map(async t => {
+              const threadLog = nextThreads[t.id]?.messages?.slice(-5).map(m => `[${m.source}] ${m.content}`).join('\n') || '';
+              const opts = await callAI(
+                [{ role: 'user', content: `Task: "${t.title}"\nContext: ${t.context||'none'}\nDecision question: ${t.decisionQuestion}\nThread:\n${threadLog}\n\nSuggest 3 concise decision options. Format as a JSON array of strings: ["Option A", "Option B", "Option C"]. No preamble.` }],
+                `You are OpsLog AI. Return ONLY a JSON array of 3 decision option strings. No explanation.`
+              );
+              let options = [];
+              try { options = JSON.parse(opts.match(/\[[\s\S]*\]/)?.[0] || '[]'); } catch {}
+              if (!options.length) options = opts.split('\n').filter(l => l.trim()).slice(0,3).map(l => l.replace(/^\d+[.)]\s*/,'').trim());
+              return { taskId: t.id, title: t.title, context: t.context, decisionQuestion: t.decisionQuestion, options };
+            }));
+
+            const initSelected = {};
+            cards.forEach(c => { initSelected[c.taskId] = []; });
+
+            setDecisionOptionsState({
+              cards,
+              currentIndex: 0,
+              selectedOptions: initSelected,
+              customInput: '',
+              eodPendingData: { target, eodTasks, numbered, todayStr, today }
+            });
+            setChatHistory(prev => [...prev, { role: 'assistant', content: `🔮 ${cards.length} task${cards.length>1?'s':''} need decision options before the EOD can be completed. Select options below.`, _show: `🔮 ${cards.length} task${cards.length>1?'s':''} need decision options before the EOD can be completed. Select options below.` }]);
+          } catch(e) {
+            setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
+          } finally { setAiLoading(false); }
+          return; // don't generate notification yet
+        }
+
+        // No missing options — finalize immediately
+        await finalizeEod(target, eodTasks, numbered, todayStr, today);
+      } catch (e) {
+        setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
+      }
+    };
+
     // ── Agenda
+    // ── Agenda
+    // PURPOSE: Daily check-in tool. Generates numbered follow-up questions for open tasks,
+    // logs answers to threads with AGENDA source tag.
+    // SYMMETRY NOTE: Agenda and EOD share the same question→answer→log pattern.
+    // Any session handling, banner logic, or routing changes made here MUST be mirrored
+    // in the EOD workflow (startEod / handleEodResponse) and vice versa.
     const startAgenda = async () => {
       if (aiLoading) return;
       const openTasks = Object.values(tasks).filter(t => t.status !== 'done');
@@ -849,18 +1041,19 @@ ACTION:{"type":"TYPE","payload":{...}}
         setChatHistory(prev => [...prev, { role: 'assistant', content: 'No open tasks found for agenda.', _show: 'No open tasks found for agenda.' }]);
         return;
       }
-      setChatHistory(prev => [...prev, { role: 'user', content: 'Agenda', _show: '📋 Agenda' }]);
+      const sessionId = uid();
+      setChatHistory(prev => [...prev, { role: 'user', content: 'Agenda', _show: '📋 Agenda', _agendaSessionId: sessionId }]);
       setAiLoading(true);
       try {
         const taskLines = openTasks.map((t, i) =>
-          `${i + 1}. [${getCatLabel(t.category)}] ${t.title}${t.dueDate ? ' (due ' + fmtDate(t.dueDate) + ')' : ''}${t.status === 'in-progress' ? ' — IN PROGRESS' : t.status === 'decision' ? ' — NEEDS DECISION' : ''}`
+          `${i + 1}. ${(t.labels||[]).length ? '['+getLabelNames(t.labels)+'] ' : ''}${t.title}${t.dueDate ? ' (due ' + fmtDate(t.dueDate) + ')' : ''}${t.status === 'in-progress' ? ' — IN PROGRESS' : t.status === 'decision' ? ' — NEEDS DECISION' : ''}${t.notes ? '\n   Notes: ' + t.notes : ''}${t.context ? '\n   Context: ' + t.context : ''}`
         ).join('\n');
         const aiText = await callAI(
           [{ role: 'user', content: `Open tasks:\n${taskLines}\n\nGenerate numbered follow-up questions or action items for today.` }],
           `You are an operations assistant. Given the open tasks below, generate a numbered list of focused follow-up questions or action items the user should address today. One question per task that needs attention. Be concise and direct.`
         );
-        setAgendaState({ tasks: openTasks, step: 'asked' });
-        setChatHistory(prev => [...prev, { role: 'assistant', content: aiText + '\n\n_Reply with numbered answers (e.g. "1. done 2. following up with client")_', _show: aiText + '\n\n_Reply with numbered answers (e.g. "1. done 2. following up with client")_' }]);
+        setAgendaState({ tasks: openTasks, step: 'asked', sessionId });
+        setChatHistory(prev => [...prev, { role: 'assistant', content: aiText + '\n\n_Reply with numbered answers (e.g. "1. done 2. following up with client")_', _show: aiText + '\n\n_Reply with numbered answers (e.g. "1. done 2. following up with client")_', _agendaSessionId: sessionId }]);
       } catch (e) {
         setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
       } finally { setAiLoading(false); }
@@ -869,6 +1062,10 @@ ACTION:{"type":"TYPE","payload":{...}}
     const handleAgendaResponse = async (responseText) => {
       try {
         const numbered = parseNumbered(responseText);
+        if (Object.keys(numbered).length === 0) {
+          setChatHistory(prev => [...prev, { role: 'assistant', content: "⚠️ I couldn't find any numbered answers. Please reply with numbered responses — e.g.:\n`1. done 2. following up with client 3. scheduled for tomorrow`", _show: "⚠️ I couldn't find any numbered answers. Please reply with numbered responses — e.g.:\n`1. done 2. following up with client 3. scheduled for tomorrow`" }]);
+          return; // Keep agendaState active — user can retry
+        }
         const agdTasks = agendaState.tasks;
         const nextThreads = { ...threads };
         let logged = 0;
@@ -883,10 +1080,8 @@ ACTION:{"type":"TYPE","payload":{...}}
         });
         setThreads(nextThreads);
         setAgendaState(null);
-        Object.entries(numbered).forEach(([numStr]) => {
-          const idx = parseInt(numStr) - 1;
-          if (idx >= 0 && idx < agdTasks.length) refreshThreadSummary(agdTasks[idx].id, nextThreads);
-        });
+        // No refreshThreadSummary loop needed here — context is kept current
+        // by the real-time refreshThreadSummary call on every thread write.
         setChatHistory(prev => [...prev, { role: 'assistant', content: `✅ Logged ${logged} agenda update${logged !== 1 ? 's' : ''} to task threads.`, _show: `✅ Logged ${logged} agenda update${logged !== 1 ? 's' : ''} to task threads.` }]);
       } catch (e) {
         setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
@@ -913,12 +1108,8 @@ ACTION:{"type":"TYPE","payload":{...}}
         } catch {}
         const today = new Date().toISOString().slice(0, 10);
         const id = uid();
-        const newTask = { id, title, category: categories[0]?.id || 'todo', dueDate: today, notes, status: 'done', decisionQuestion: '', decisionOptions: '', email: '', createdAt: now(), updatedAt: now() };
+        const newTask = { id, title, labels: [], dueDate: today, notes: notes, context: '', status: 'done', decisionQuestion: '', decisionOptions: '', decisionMaker: '', email: '', createdAt: now(), updatedAt: now() };
         setTasks(prev => ({ ...prev, [id]: newTask }));
-        const nextThreads = { ...threads };
-        if (!nextThreads[id]) nextThreads[id] = { messages: [] };
-        nextThreads[id].messages.push({ id: uid(), content: content, timestamp: now(), source: 'update' });
-        setThreads(nextThreads);
         setChatHistory(prev => [...prev, { role: 'assistant', content: `✅ Accomplishment logged: **${title}**${notes ? '\n_' + notes + '_' : ''}`, _show: `✅ Accomplishment logged: **${title}**${notes ? '\n_' + notes + '_' : ''}` }]);
       } catch (e) {
         setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
@@ -941,7 +1132,7 @@ ACTION:{"type":"TYPE","payload":{...}}
       }
       try {
         const taskLines = allTasks.map((t, i) =>
-          `${i+1}. [${t.id}] "${t.title}" | Due: ${t.dueDate||'NONE'} | Status: ${t.status}\n   Thread: ${getThreadLog(t.id)}`
+          `${i+1}. [${t.id}] "${t.title}" | Due: ${t.dueDate||'NONE'} | Status: ${t.status}${t.notes ? ' | Notes: ' + t.notes : ''}${t.context ? ' | Context: ' + t.context : ''}\n   Thread: ${getThreadLog(t.id)}`
         ).join('\n\n');
         const aiText = await callAI(
           [{ role: 'user', content: `Update message: "${updateText}"\n\nTasks and their threads:\n${taskLines}` }],
@@ -1011,32 +1202,44 @@ If NO task matches:
           [{ role: 'user', content: `Task: "${selectedTask.title}" (Due: ${fmtDate(selectedTask.dueDate)||'No date'})\nNew update just logged: "${updateText}"\n\nFull thread:\n${threadLog}\n\nSummarise the current status of this task in 2–3 sentences. Plain text, no bullets.` }],
           `You are OpsLog AI. Write a brief thread summary after a new update was logged. 2–3 sentences max, plain text.`
         );
-        // Cache the summary on the thread so the Overview reflects it immediately
+        // Cache the summary on the thread and write to task.context (single source of truth)
         setThreads(prev => ({ ...prev, [selectedTask.id]: { ...prev[selectedTask.id], summary } }));
+        setTasks(prev => ({ ...prev, [selectedTask.id]: { ...prev[selectedTask.id], context: summary, updatedAt: now() } }));
         setChatHistory(prev => [...prev, { role: 'assistant', content: summary, _show: `✅ Logged to **${selectedTask.title}**.\n\n${summary}` }]);
       } catch (e) {
         setChatHistory(prev => [...prev, { role: 'assistant', content: e.message, _show: `⚠️ ${e.message}` }]);
       }
     };
 
-    // ── Thread Overview Summary
+    // ── Thread Context Summary (auto-refreshes task.context as single source of truth)
     const refreshThreadSummary = async (taskId, latestThreads) => {
       const thread = latestThreads[taskId];
       if (!thread?.messages?.length || summarizing) return;
       setSummarizing(true);
       try {
         const t = tasks[taskId];
-        const log = thread.messages.slice(-10).map(m => `[${fmtTime(m.timestamp)}] ${m.content}`).join('\n');
+        // Use full thread log for maximum context accuracy
+        const log = thread.messages.map(m => `[${fmtTime(m.timestamp)}][${m.source?.toUpperCase()||'LOG'}] ${m.content}`).join('\n');
         const summaryText = await callAI(
-          [{ role: 'user', content: `Task: "${t?.title}" (Due: ${fmtDate(t?.dueDate)||'No date'} · Status: ${t?.status})\n\nThread updates:\n${log}\n\nWrite a 2–3 sentence summary of the current status and what's next. Plain text only.` }],
-          `You are OpsLog AI. Summarise a task thread in 2–3 plain sentences. Focus on current status and next steps. No bullets, no headers.`
+          [{ role: 'user', content: `Task: "${t?.title}" (Due: ${fmtDate(t?.dueDate)||'No date'} · Status: ${t?.status})\n\nFull thread history:\n${log}\n\nWrite a concise 2–3 sentence summary of the current status, key updates, and what's next. Plain text only.` }],
+          `You are OpsLog AI. Summarise a task thread in 2–3 plain sentences. Include current status, key updates, and next steps. No bullets, no headers.`
         );
+        // Write to both thread.summary (for display) and task.context (single source of truth for EOD)
         setThreads(prev => ({ ...prev, [taskId]: { ...prev[taskId], summary: summaryText } }));
-      } catch (e) { console.warn('Summary refresh failed:', e); }
+        setTasks(prev => ({ ...prev, [taskId]: { ...prev[taskId], context: summaryText, updatedAt: now() } }));
+      } catch (e) { console.warn('Context refresh failed:', e); }
       finally { setSummarizing(false); }
     };
 
     // ── Decision AI Suggest
+    const handleSuggestClick = (task) => {
+      if (task.decisionQuestion || task.decisionOptions) {
+        setConfirmDecisionReplace(true);
+      } else {
+        suggestDecisionOptions(task);
+      }
+    };
+
     const suggestDecisionOptions = async (task) => {
       setDecisionDraftLoading(true);
       setDecisionDraft(null);
@@ -1046,7 +1249,7 @@ If NO task matches:
         const existingOptions = task.decisionOptions ? `\nCurrently saved options:\n${task.decisionOptions}` : '';
         const existingQuestion = task.decisionQuestion ? `\nCurrent question: ${task.decisionQuestion}` : '';
         const aiText = await callAI(
-          [{ role: 'user', content: `Task: "${task.title}"\nStatus: ${task.status}\nNotes: ${task.notes||'None'}${existingQuestion}${existingOptions}\n\nFull thread history:\n${fullLog}` }],
+          [{ role: 'user', content: `Task: "${task.title}"\nStatus: ${task.status}\nContext: ${task.context||'None'}${existingQuestion}${existingOptions}\n\nFull thread history:\n${fullLog}` }],
           `You are OpsLog AI. Based on the task details and full thread history, suggest:
 1. A concise decision question (what needs to be decided right now)
 2. 2–3 clear, practical options that reflect the task's CURRENT state
@@ -1081,7 +1284,7 @@ No preamble, no explanation — just the JSON.`
         const fullLog = getFullThreadLog(task.id);
         const savedOptions = task.decisionOptions ? `\nPreviously saved options:\n${task.decisionOptions}` : '';
         const aiText = await callAI(
-          [{ role: 'user', content: `Task: "${task.title}"\nStatus: ${task.status}\nNotes: ${task.notes||'None'}\nDecision Question: ${task.decisionQuestion||'Not specified'}${savedOptions}\nAlready suggested in this session: ${existing}\n\nFull thread history:\n${fullLog}` }],
+          [{ role: 'user', content: `Task: "${task.title}"\nStatus: ${task.status}\nContext: ${task.context||'None'}\nDecision Question: ${task.decisionQuestion||'Not specified'}${savedOptions}\nAlready suggested in this session: ${existing}\n\nFull thread history:\n${fullLog}` }],
           `You are OpsLog AI. Suggest 2–3 ADDITIONAL decision options that are different from both the ones already suggested in this session AND any previously saved options. Base them on the task's current state as reflected in the thread history. Format as a numbered list. One line per option. No preamble — start directly with "1.".`
         );
         const clean = aiText.replace(/ACTION:\{[\s\S]*?\}(?:\s*$)/m, '').trim();
@@ -1103,6 +1306,7 @@ No preamble, no explanation — just the JSON.`
       setTasks(prev => ({ ...prev, [activeThread]: { ...prev[activeThread], ...updates } }));
       setDecisionDraft(null);
       setDecisionDraftQuestion(null);
+      setConfirmDecisionReplace(false);
     };
 
     // ── Task CRUD
@@ -1119,14 +1323,35 @@ No preamble, no explanation — just the JSON.`
       setTasks(nextTasks); setThreads(nextThreads); setEditTask(null);
     };
 
-    const newTaskTemplate = () => ({ id: uid(), title: '', category: categories[0]?.id||'todo', dueDate: '', notes: '', status: 'open', decisionQuestion: '', decisionOptions: '', decisionMaker: '', email: '', _exists: false });
+    const newTaskTemplate = () => ({ id: uid(), title: '', labels: [], notes: '', dueDate: '', context: '', status: 'open', decisionQuestion: '', decisionOptions: '', decisionMaker: '', email: '', _exists: false });
+
+    // ── Thread entry edit/delete
+    const deleteThreadEntry = (taskId, msgId) => {
+      if (!confirm('Delete this entry?')) return;
+      setThreads(prev => ({
+        ...prev,
+        [taskId]: { ...prev[taskId], messages: prev[taskId].messages.filter(m => m.id !== msgId) }
+      }));
+    };
+
+    const saveEntryEdit = (taskId, msgId) => {
+      setThreads(prev => ({
+        ...prev,
+        [taskId]: {
+          ...prev[taskId],
+          messages: prev[taskId].messages.map(m => m.id === msgId ? { ...m, content: editingEntryText, editedAt: now() } : m)
+        }
+      }));
+      setEditingEntryId(null);
+      setEditingEntryText('');
+    };
 
     // ── Thread updates
     const addUpdate = (taskId, content) => {
       if (!content.trim()) return;
       const nextThreads = { ...threads };
       if (!nextThreads[taskId]) nextThreads[taskId] = { messages: [] };
-      nextThreads[taskId].messages.push({ id: uid(), content, timestamp: now(), source: 'user' });
+      nextThreads[taskId].messages.push({ id: uid(), content, timestamp: now(), source: 'update' });
       setThreads(nextThreads); setThreadInput('');
       refreshThreadSummary(taskId, nextThreads); // background — no await
     };
@@ -1143,7 +1368,7 @@ No preamble, no explanation — just the JSON.`
       setThreadInput('');
       setThreadAiLoading(true);
       try {
-        const sysPrompt = `You are OpsLog AI assisting with a specific task. Be concise and practical.\nTask: "${task.title}" | Status: ${task.status} | Due: ${task.dueDate||'none'} | Category: ${getCatLabel(task.category)}\nNotes: ${task.notes||'none'}\nDecision question: ${task.decisionQuestion||'none'}\nOptions: ${task.decisionOptions||'none'}`;
+        const sysPrompt = `You are OpsLog AI assisting with a specific task. Be concise and practical.\nTask: "${task.title}" | Status: ${task.status} | Due: ${task.dueDate||'none'}${(task.labels||[]).length ? ' | Labels: '+getLabelNames(task.labels) : ''}\nNotes: ${task.notes||'none'}\nContext: ${task.context||'none'}\nDecision question: ${task.decisionQuestion||'none'}\nOptions: ${task.decisionOptions||'none'}`;
         const history = (withUser[taskId]?.messages||[]).slice(-10).map(m => ({
           role: m.source === 'ai' ? 'assistant' : 'user',
           content: m.content
@@ -1164,15 +1389,9 @@ No preamble, no explanation — just the JSON.`
       }
     };
 
-    // ── Category settings
-    const saveCategories = (newCats) => {
-      const nextTasks = { ...tasks };
-      const validIds  = newCats.map(c => c.id);
-      const fallbackId = newCats[0]?.id;
-      Object.keys(nextTasks).forEach(id => {
-        if (!validIds.includes(nextTasks[id].category)) nextTasks[id] = { ...nextTasks[id], category: fallbackId };
-      });
-      setCategories(newCats); setTasks(nextTasks); setShowCatSettings(false);
+    // ── Label settings
+    const saveLabels = (newLabels) => {
+      setLabels(newLabels); setShowCatSettings(false);
     };
 
     const handleCopy = async (id, content) => {
@@ -1213,20 +1432,102 @@ No preamble, no explanation — just the JSON.`
             );
           })}
           {aiLoading && <div className="chat-msg ai"><div className="typing-dots"><span/><span/><span/></div></div>}
+          {decisionOptionsState && (() => {
+            const { cards, currentIndex, selectedOptions, customInput } = decisionOptionsState;
+            const card = cards[currentIndex];
+            const selected = selectedOptions[card.taskId] || [];
+            return (
+              <div className="decision-carousel">
+                <div className="decision-carousel-header">🔮 Decision Options — {currentIndex+1} of {cards.length}</div>
+                <div className="decision-carousel-title">{card.title}</div>
+                {card.context && <div style={{fontSize:12,color:'var(--text2)',marginBottom:6}}>{card.context}</div>}
+                <div className="decision-carousel-question">{card.decisionQuestion}</div>
+                <div>
+                  {card.options.map((opt, i) => (
+                    <button key={i} type="button"
+                      className={`decision-option-chip ${selected.includes(opt) ? 'selected' : ''}`}
+                      onClick={() => {
+                        const cur = selectedOptions[card.taskId] || [];
+                        setDecisionOptionsState(prev => ({
+                          ...prev,
+                          selectedOptions: { ...prev.selectedOptions, [card.taskId]: cur.includes(opt) ? cur.filter(x=>x!==opt) : [...cur, opt] }
+                        }));
+                      }}>
+                      {opt}
+                    </button>
+                  ))}
+                </div>
+                <div style={{display:'flex',gap:8,marginTop:8,alignItems:'center'}}>
+                  <input
+                    className="chat-textarea" style={{borderRadius:8,minHeight:'unset',padding:'7px 10px',fontSize:13,flex:1}}
+                    placeholder="Add a custom option..."
+                    value={customInput}
+                    onChange={e => setDecisionOptionsState(prev => ({...prev, customInput: e.target.value}))}
+                  />
+                </div>
+                <div style={{display:'flex',gap:8,marginTop:10,alignItems:'center',justifyContent:'space-between'}}>
+                  <button className="entry-action-btn" onClick={() => {
+                    setDecisionOptionsState(prev => {
+                      if (prev.currentIndex + 1 >= prev.cards.length) {
+                        const { eodPendingData } = prev;
+                        finalizeEod(eodPendingData.target, eodPendingData.eodTasks, eodPendingData.numbered, eodPendingData.todayStr, eodPendingData.today);
+                        return null;
+                      }
+                      return { ...prev, currentIndex: prev.currentIndex + 1, customInput: '' };
+                    });
+                  }}>Skip</button>
+                  <button className="decision-carousel-submit"
+                    disabled={selected.length === 0 && !customInput.trim()}
+                    onClick={() => {
+                      const finalOptions = [...selected, ...(customInput.trim() ? [customInput.trim()] : [])];
+                      const optionsStr = finalOptions.map((o,i) => `${i+1}. ${o}`).join('\n');
+                      setTasks(prev => ({ ...prev, [card.taskId]: { ...prev[card.taskId], decisionOptions: optionsStr, updatedAt: now() } }));
+                      setChatHistory(prev => [...prev, { role: 'assistant', content: `✅ Options saved for **${card.title}**`, _show: `✅ Options saved for **${card.title}**` }]);
+                      setDecisionOptionsState(prev => {
+                        if (prev.currentIndex + 1 >= prev.cards.length) {
+                          const { eodPendingData } = prev;
+                          finalizeEod(eodPendingData.target, eodPendingData.eodTasks, eodPendingData.numbered, eodPendingData.todayStr, eodPendingData.today);
+                          return null;
+                        }
+                        return { ...prev, currentIndex: prev.currentIndex + 1, customInput: '' };
+                      });
+                    }}>
+                    {currentIndex + 1 < cards.length ? 'Save & Next →' : 'Save & Generate EOD'}
+                  </button>
+                </div>
+              </div>
+            );
+          })()}
           <div ref={chatEndRef}/>
         </div>
         <div className="chat-input-area">
-          {agendaState?.step === 'asked' && <div className="eod-banner agenda-banner">📋 Agenda active — reply with numbered answers (1. ... 2. ...)</div>}
-          {eodState?.step === 'asked' && <div className="eod-banner">📊 {eodState.target === 'tarek' ? 'EOD: Tarek' : 'EOD: Symon'} — reply with numbered answers (1. ... 2. ...)</div>}
+          {agendaState?.step === 'asked' && (
+            <div className="eod-banner agenda-banner banner-with-refresh">
+              <span>📋 Agenda active — reply with numbered answers · <em>Refresh if info is outdated</em></span>
+              <div style={{display:'flex',gap:6,flexShrink:0}}>
+                <button className="banner-refresh-btn" onClick={refreshAgenda} disabled={aiLoading}>↻ Refresh</button>
+                <button className="banner-cancel-btn" onClick={() => setAgendaState(null)} disabled={aiLoading}>✕ Cancel</button>
+              </div>
+            </div>
+          )}
+          {eodState?.step === 'asked' && (
+            <div className="eod-banner banner-with-refresh">
+              <span>📊 {eodState.target === 'tarek' ? 'EOD: Tarek' : 'EOD: Symon'} — reply with numbered answers · <em>Refresh if info is outdated</em></span>
+              <div style={{display:'flex',gap:6,flexShrink:0}}>
+                <button className="banner-refresh-btn" onClick={refreshEod} disabled={aiLoading}>↻ Refresh</button>
+                <button className="banner-cancel-btn" onClick={() => setEodState(null)} disabled={aiLoading}>✕ Cancel</button>
+              </div>
+            </div>
+          )}
           {updateTaskState?.step === 'picking' && <div className="update-banner">✏️ Update Mode — reply with the number of the thread to update</div>}
           <div className="pills">
-            <button className={`pill ${activePill==='accomplish' ? 'pill-active' : ''}`} onClick={() => { setChatInput('Accomplishment: '); setActivePill('accomplish'); }}>🏆 Accomplishments</button>
-            <button className={`pill ${activePill==='addtask' ? 'pill-active' : ''}`} onClick={() => { setChatInput('Add task: '); setActivePill('addtask'); }}>＋ Add Task</button>
-            <button className={`pill ${activePill==='updatetask' ? 'pill-active' : ''}`} onClick={() => { setChatInput('Update task: '); setActivePill('updatetask'); }}>✏️ Update Task</button>
-            <button className={`pill ${activePill==='agenda' ? 'pill-active' : ''}`} onClick={() => { setActivePill('agenda'); startAgenda(); }} disabled={aiLoading}>📋 Agenda</button>
-            <button className={`pill ${activePill==='eod-tarek' ? 'pill-active' : ''}`} onClick={() => { setActivePill('eod-tarek'); startEod('tarek'); }} disabled={aiLoading}>📊 EOD: Tarek</button>
-            <button className={`pill ${activePill==='eod-symon' ? 'pill-active' : ''}`} onClick={() => { setActivePill('eod-symon'); startEod('symon'); }} disabled={aiLoading}>📊 EOD: Symon</button>
-            <button className={`pill ${activePill==='clear' ? 'pill-active' : ''}`} onClick={() => { if (window.confirm('Clear chat history?')) { setChatHistory([]); setActivePill(null); } }}>🗑️ Clear Chat</button>
+            <button className={`pill ${activePill==='accomplish' ? 'pill-active' : ''}`} onClick={() => { setChatInput('Accomplishment: '); setActivePill('accomplish'); }} disabled={aiLoading || !!eodState || !!agendaState}>🏆 Accomplishments</button>
+            <button className={`pill ${activePill==='addtask' ? 'pill-active' : ''}`} onClick={() => { setChatInput('Add task: '); setActivePill('addtask'); }} disabled={aiLoading || !!eodState || !!agendaState}>＋ Add Task</button>
+            <button className={`pill ${activePill==='updatetask' ? 'pill-active' : ''}`} onClick={() => { setChatInput('Update task: '); setActivePill('updatetask'); }} disabled={aiLoading || !!eodState || !!agendaState}>✏️ Update Task</button>
+            <button className={`pill ${activePill==='agenda' ? 'pill-active' : ''}`} onClick={() => { setActivePill('agenda'); startAgenda(); }} disabled={aiLoading || !!eodState || !!agendaState}>📋 Agenda</button>
+            <button className={`pill ${activePill==='eod-tarek' ? 'pill-active' : ''}`} onClick={() => { setActivePill('eod-tarek'); startEod('tarek'); }} disabled={aiLoading || !!eodState || !!agendaState}>📊 EOD: Tarek</button>
+            <button className={`pill ${activePill==='eod-symon' ? 'pill-active' : ''}`} onClick={() => { setActivePill('eod-symon'); startEod('symon'); }} disabled={aiLoading || !!eodState || !!agendaState}>📊 EOD: Symon</button>
+            <button className={`pill ${activePill==='clear' ? 'pill-active' : ''}`} onClick={() => { if (window.confirm('Clear chat history?')) { setChatHistory([]); setActivePill(null); } }} disabled={aiLoading || !!eodState || !!agendaState}>🗑️ Clear Chat</button>
           </div>
           <div className="chat-row">
             <textarea
@@ -1247,18 +1548,86 @@ No preamble, no explanation — just the JSON.`
       </div>
     );
 
+    const renderTaskCard = (task) => (
+      <div key={task.id} className="task-card" onClick={() => setEditTask({ ...task, _exists: true })}>
+        <div className="task-card-top">
+          <div className="task-title">{task.title}</div>
+          <div style={{ display:'flex', alignItems:'center', gap:5, flexShrink:0 }}>
+            {task.context && (
+              <button className="context-icon-btn" onClick={e => { e.stopPropagation(); setContextPopupId(task.id); }} title="View context">📝</button>
+            )}
+            <span className={`status-chip ${task.status}`}>{STATUS_OPTIONS.find(s=>s.value===task.status)?.label||task.status}</span>
+          </div>
+        </div>
+        {(task.labels||[]).length > 0 && (
+          <div className="task-label-chips">
+            {(task.labels||[]).map(lid => {
+              const lbl = labels.find(l => l.id === lid);
+              return lbl ? <span key={lid} className="task-label-chip" style={{background: lbl.color+'22', color: lbl.color, border: `1px solid ${lbl.color}44`}}>{lbl.label}</span> : null;
+            })}
+          </div>
+        )}
+        <div className="task-meta">
+          {task.dueDate
+            ? <span className={`due-badge ${isOverdue(task.dueDate, task.status) ? 'overdue' : ''}`}>
+                📅 {fmtDate(task.dueDate)}{isOverdue(task.dueDate, task.status) ? ' ⚠️' : ''}
+              </span>
+            : <span className="due-badge overdue">⚠️ No due date</span>
+          }
+          {threads[task.id]?.messages?.length > 0 && (
+            <span style={{ fontSize: 11, color: 'var(--text2)' }}>🧵 {threads[task.id].messages.length}</span>
+          )}
+        </div>
+      </div>
+    );
+
     const renderBoard = () => {
       const allTasks = Object.values(tasks);
+      const today = new Date().toISOString().slice(0,10);
+
+      let columns = [];
+      if (boardGroupBy === 'status') {
+        const STATUS_COLS = [
+          { id: 'open',        label: 'Open',        color: '#3b82f6' },
+          { id: 'in-progress', label: 'In Progress',  color: '#f59e0b' },
+          { id: 'decision',    label: 'Decision',     color: '#8b5cf6' },
+          { id: 'done',        label: 'Done',         color: '#10b981' },
+        ];
+        columns = STATUS_COLS.map(col => ({
+          ...col,
+          tasks: allTasks.filter(t => t.status === col.id).sort((a,b) => new Date(a.dueDate||'9999-12-31') - new Date(b.dueDate||'9999-12-31'))
+        }));
+      } else if (boardGroupBy === 'label') {
+        const labelCols = labels.map(lbl => ({
+          id: lbl.id, label: lbl.label, color: lbl.color,
+          tasks: allTasks.filter(t => (t.labels||[]).includes(lbl.id)).sort((a,b) => new Date(a.dueDate||'9999-12-31') - new Date(b.dueDate||'9999-12-31'))
+        }));
+        const noLabel = { id: '_nolabel', label: 'No Label', color: '#9ca3af',
+          tasks: allTasks.filter(t => !(t.labels||[]).length).sort((a,b) => new Date(a.dueDate||'9999-12-31') - new Date(b.dueDate||'9999-12-31'))
+        };
+        columns = [...labelCols, noLabel];
+      } else { // duedate
+        const getWeek = () => { const d = new Date(today); d.setDate(d.getDate()+7); return d.toISOString().slice(0,10); };
+        columns = [
+          { id: 'overdue',  label: 'Overdue',   color: '#ef4444', tasks: allTasks.filter(t => t.dueDate && t.dueDate < today && t.status !== 'done').sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)) },
+          { id: 'today',    label: 'Today',     color: '#f59e0b', tasks: allTasks.filter(t => t.dueDate === today).sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)) },
+          { id: 'thisweek', label: 'This Week', color: '#3b82f6', tasks: allTasks.filter(t => t.dueDate && t.dueDate > today && t.dueDate <= getWeek()).sort((a,b) => new Date(a.dueDate) - new Date(b.dueDate)) },
+          { id: 'later',    label: 'Later',     color: '#10b981', tasks: allTasks.filter(t => !t.dueDate || t.dueDate > getWeek()).sort((a,b) => new Date(a.dueDate||'9999-12-31') - new Date(b.dueDate||'9999-12-31')) },
+        ];
+      }
+
       return (
         <div className="board">
           <div className="board-toolbar">
             <button className="board-add-btn" onClick={() => setEditTask(newTaskTemplate())}>+ Add Task Manually</button>
-            <button className="board-settings-btn" onClick={() => setShowCatSettings(true)} title="Edit categories">⚙️</button>
+            <select className="board-groupby-select" value={boardGroupBy} onChange={e => setBoardGroupBy(e.target.value)}>
+              <option value="status">By Status</option>
+              <option value="label">By Label</option>
+              <option value="duedate">By Due Date</option>
+            </select>
+            <button className="board-settings-btn" onClick={() => setShowCatSettings(true)} title="Manage Labels">⚙️</button>
           </div>
-          {categories.map(col => {
-            const colTasks = allTasks
-              .filter(t => t.category === col.id)
-              .sort((a, b) => new Date(a.dueDate||'9999-12-31') - new Date(b.dueDate||'9999-12-31'));
+          {columns.map(col => {
             const collapsed = collapsedCols[col.id];
             return (
               <div key={col.id} className="column">
@@ -1269,33 +1638,15 @@ No preamble, no explanation — just the JSON.`
                     <span className="col-label">{col.label}</span>
                   </div>
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                    <span className="col-count">{colTasks.length}</span>
+                    <span className="col-count">{col.tasks.length}</span>
                     <span className="col-chevron">{collapsed ? '▼' : '▲'}</span>
                   </div>
                 </div>
                 {!collapsed && (
                   <div className="task-list">
-                    {colTasks.length === 0
+                    {col.tasks.length === 0
                       ? <div className="col-empty">No tasks</div>
-                      : colTasks.map(task => (
-                          <div key={task.id} className="task-card" onClick={() => setEditTask({ ...task, _exists: true })}>
-                            <div className="task-card-top">
-                              <div className="task-title">{task.title}</div>
-                              <span className={`status-chip ${task.status}`}>{STATUS_OPTIONS.find(s=>s.value===task.status)?.label||task.status}</span>
-                            </div>
-                            <div className="task-meta">
-                              {task.dueDate
-                                ? <span className={`due-badge ${isOverdue(task.dueDate, task.status) ? 'overdue' : ''}`}>
-                                    📅 {fmtDate(task.dueDate)}{isOverdue(task.dueDate, task.status) ? ' ⚠️' : ''}
-                                  </span>
-                                : <span className="due-badge overdue">⚠️ No due date</span>
-                              }
-                              {threads[task.id]?.messages?.length > 0 && (
-                                <span style={{ fontSize: 11, color: 'var(--text2)' }}>🧵 {threads[task.id].messages.length}</span>
-                              )}
-                            </div>
-                          </div>
-                        ))
+                      : col.tasks.map(task => renderTaskCard(task))
                     }
                   </div>
                 )}
@@ -1311,7 +1662,7 @@ No preamble, no explanation — just the JSON.`
         const task = tasks[activeThread];
         if (!task) { setActiveThread(null); return null; }
         const thread = threads[activeThread] || { messages: [] };
-        const col    = categories.find(c => c.id === task.category);
+        const taskLabelItems = (task.labels||[]).map(lid => labels.find(l => l.id === lid)).filter(Boolean);
         return (
           <div className="thread-view-wrap">
             <div className="thread-scrollable">
@@ -1323,30 +1674,42 @@ No preamble, no explanation — just the JSON.`
                   {task.dueDate ? `Due ${fmtDate(task.dueDate)}` : 'No due date'}
                   <span>·</span>
                   <span className={`status-chip ${task.status}`} style={{ fontSize: 10 }}>{STATUS_OPTIONS.find(s=>s.value===task.status)?.label||task.status}</span>
-                  {col && <><span>·</span><span style={{ color: col.color, fontWeight: 600 }}>{col.label}</span></>}
+                  {taskLabelItems.map(lbl => (
+                    <span key={lbl.id} style={{ color: lbl.color, fontWeight: 600, fontSize: 11 }}> · {lbl.label}</span>
+                  ))}
                 </div>
               </div>
-              <button className="icon-btn" onClick={() => { setShowDecisionModal(true); suggestDecisionOptions(task); }} title="Quick Decision">🔮</button>
+              <span className="thread-mode-badge">{threadMode === 'log' ? '✏️ LOG' : '✨ AI ASSIST'}</span>
               <button className="icon-btn" onClick={() => setEditTask({ ...task, _exists: true })} title="Edit task">✏️</button>
+              <button className="context-icon-btn" onClick={() => { setShowDecisionModal(true); handleSuggestClick(task); }} title="AI Suggest decision">🔮</button>
+              <button className="context-icon-btn" onClick={() => setContextPopupId(activeThread)} title="Current Summary">📝</button>
             </div>
             <div className="thread-summary-block">
               <div className="thread-summary-hdr">
-                <span>📋 Overview</span>
+                <span>Current Summary</span>
                 <button className="refresh-btn" onClick={() => refreshThreadSummary(activeThread, threads)} disabled={summarizing || !apiKey}>
                   {summarizing ? '...' : '↻ Refresh'}
                 </button>
               </div>
               {summarizing
-                ? <div className="thread-summary-empty">Generating summary...</div>
-                : thread.summary
-                  ? <div className="thread-summary-text">{thread.summary}</div>
-                  : <div className="thread-summary-empty">No summary yet — add an update or tap ↻ Refresh.</div>
+                ? <div className="thread-summary-empty">Updating context...</div>
+                : (thread.summary || task.context)
+                  ? <div className="thread-summary-text">{thread.summary || task.context}</div>
+                  : <div className="thread-summary-empty">No context yet — add updates to this thread and context will auto-generate.</div>
               }
+              {task.notes && (
+                <div className="overview-block" style={{marginTop:8}}>
+                  <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:6}}>
+                    <span style={{fontSize:12,fontWeight:600,color:'var(--text2)'}}>📋 Notes</span>
+                  </div>
+                  <div style={{fontSize:13,lineHeight:1.5,color:'var(--text)'}}>{task.notes}</div>
+                </div>
+              )}
             </div>
             <div className="decision-block" ref={decisionBlockRef}>
               <div className="decision-block-hdr">
                 <span>🔮 Decision</span>
-                <button className="decision-suggest-btn" onClick={() => suggestDecisionOptions(task)} disabled={decisionDraftLoading}>
+                <button className="decision-suggest-btn" onClick={() => handleSuggestClick(task)} disabled={decisionDraftLoading || confirmDecisionReplace}>
                   {decisionDraftLoading ? '...' : '✨ AI Suggest'}
                 </button>
               </div>
@@ -1354,58 +1717,94 @@ No preamble, no explanation — just the JSON.`
                 ? <div className="decision-question">{task.decisionQuestion}</div>
                 : <div className="decision-empty">No question set — add one in the task.</div>
               }
-              {decisionDraft !== null
-                ? <>
-                    {decisionDraftQuestion && (
-                      <label className="decision-checkbox-item" style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
-                        <input type="checkbox" checked={decisionDraftQuestion.use}
-                          onChange={() => setDecisionDraftQuestion(prev => ({ ...prev, use: !prev.use }))}/>
-                        <span><strong style={{ color: '#8b5cf6' }}>Question: </strong>{decisionDraftQuestion.text}</span>
-                      </label>
+              {confirmDecisionReplace
+                ? <div style={{ marginTop: 10, background: 'var(--surface2)', borderRadius: 10, padding: '12px 14px' }}>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--danger)', marginBottom: 8 }}>
+                      ⚠️ Existing decision content will be replaced
+                    </div>
+                    {task.decisionOptions && (
+                      <div style={{ fontSize: 13, marginBottom: 10, whiteSpace: 'pre-wrap', color: 'var(--text)', background: 'var(--bg)', borderRadius: 8, padding: '8px 10px', border: '1px solid var(--border)' }}>
+                        {task.decisionOptions}
+                      </div>
                     )}
-                    <div className="decision-checkbox-list">
-                      {(Array.isArray(decisionDraft) ? decisionDraft : []).map((item, i) => (
-                        <label key={i} className="decision-checkbox-item">
-                          <input type="checkbox" checked={item.checked}
-                            onChange={() => setDecisionDraft(prev => prev.map((it,idx) => idx===i ? {...it, checked: !it.checked} : it))}/>
-                          <span>{item.text}</span>
-                        </label>
-                      ))}
-                    </div>
-                    <div className="decision-draft-btns">
-                      <button className="decision-draft-cancel" onClick={() => addMoreDecisionOptions(task)} disabled={decisionDraftLoading}>
-                        {decisionDraftLoading ? '...' : '➕ Add More'}
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button className="decision-suggest-btn" onClick={() => { setConfirmDecisionReplace(false); suggestDecisionOptions(task); }}>
+                        Replace with AI Suggestions
                       </button>
-                      <button className="decision-draft-save" onClick={saveDecisionDraft}
-                        disabled={!Array.isArray(decisionDraft) || !decisionDraft.some(i => i.checked)}>Save Checked</button>
-                      <button className="decision-draft-cancel" onClick={() => { setDecisionDraft(null); setDecisionDraftQuestion(null); }}>Cancel</button>
+                      <button className="decision-draft-cancel" onClick={() => setConfirmDecisionReplace(false)}>
+                        Keep Existing
+                      </button>
                     </div>
-                  </>
-                : task.decisionOptions
-                  ? <div className="decision-options">{task.decisionOptions}</div>
-                  : <div className="decision-empty">No options set — tap ✨ AI Suggest or edit in task.</div>
+                  </div>
+                : decisionDraft !== null
+                  ? <>
+                      {decisionDraftQuestion && (
+                        <label className="decision-checkbox-item" style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+                          <input type="checkbox" checked={decisionDraftQuestion.use}
+                            onChange={() => setDecisionDraftQuestion(prev => ({ ...prev, use: !prev.use }))}/>
+                          <span><strong style={{ color: '#8b5cf6' }}>Question: </strong>{decisionDraftQuestion.text}</span>
+                        </label>
+                      )}
+                      <div className="decision-checkbox-list">
+                        {(Array.isArray(decisionDraft) ? decisionDraft : []).map((item, i) => (
+                          <label key={i} className="decision-checkbox-item">
+                            <input type="checkbox" checked={item.checked}
+                              onChange={() => setDecisionDraft(prev => prev.map((it,idx) => idx===i ? {...it, checked: !it.checked} : it))}/>
+                            <span>{item.text}</span>
+                          </label>
+                        ))}
+                      </div>
+                      <div className="decision-draft-btns">
+                        <button className="decision-draft-cancel" onClick={() => addMoreDecisionOptions(task)} disabled={decisionDraftLoading}>
+                          {decisionDraftLoading ? '...' : '➕ Add More'}
+                        </button>
+                        <button className="decision-draft-save" onClick={saveDecisionDraft}
+                          disabled={!Array.isArray(decisionDraft) || !decisionDraft.some(i => i.checked)}>Save Checked</button>
+                        <button className="decision-draft-cancel" onClick={() => { setDecisionDraft(null); setDecisionDraftQuestion(null); }}>Cancel</button>
+                      </div>
+                    </>
+                  : task.decisionOptions
+                    ? <div className="decision-options">{task.decisionOptions}</div>
+                    : <div className="decision-empty">No options set — tap ✨ AI Suggest or edit in task.</div>
               }
             </div>
             <div className="updates-list">
               {thread.messages.length === 0 && <div className="thread-empty">No updates yet. Add one below or run EOD.</div>}
               {thread.messages.map(m => (
                 <div key={m.id} className={`update-entry ${m.source === 'eod' ? 'eod-source' : m.source === 'update' ? 'update-source' : m.source === 'ai' ? 'ai-source' : m.source === 'agenda' ? 'agenda-source' : ''}`}>
-                  {m.source === 'ai'
-                    ? <div className="update-text" dangerouslySetInnerHTML={{ __html: fmtHtml(m.content) }}/>
-                    : <div className="update-text">{m.content}</div>
+                  {editingEntryId === m.id
+                    ? <>
+                        <textarea className="entry-edit-area" value={editingEntryText}
+                          onChange={e => setEditingEntryText(e.target.value)} autoFocus/>
+                        <div className="entry-actions">
+                          <button className="entry-action-btn" onClick={() => saveEntryEdit(activeThread, m.id)}>💾 Save</button>
+                          <button className="entry-action-btn" onClick={() => { setEditingEntryId(null); setEditingEntryText(''); }}>Cancel</button>
+                        </div>
+                      </>
+                    : <>
+                        {m.source === 'ai'
+                          ? <div className="update-text" dangerouslySetInnerHTML={{ __html: fmtHtml(m.content) }}/>
+                          : <div className="update-text">{m.content}</div>
+                        }
+                        <div className="update-meta">
+                          {fmtTime(m.timestamp)}
+                          {m.editedAt && <span style={{ marginLeft: 4, fontStyle: 'italic', opacity: 0.65 }}>edited</span>}
+                          {m.source === 'eod'    && <span className="update-eod-tag">EOD</span>}
+                          {m.source === 'update' && <span className="update-tag">UPDATE</span>}
+                          {m.source === 'ai'     && <span className="update-ai-tag">AI ASSIST</span>}
+                          {m.source === 'agenda' && <span className="update-tag" style={{background:'#fff8e7',color:'#b45309',borderColor:'#f59e0b'}}>AGENDA</span>}
+                        </div>
+                        <div className="entry-actions">
+                          <button className="entry-action-btn" onClick={() => { setEditingEntryId(m.id); setEditingEntryText(m.content); }}>✏️ Edit</button>
+                          <button className="entry-action-btn danger" onClick={() => deleteThreadEntry(activeThread, m.id)}>× Delete</button>
+                          {m.source === 'ai' && (
+                            <button className="entry-action-btn" onClick={() => { navigator.clipboard.writeText(m.content); setCopiedId(m.id); setTimeout(() => setCopiedId(null), 1500); }}>
+                              {copiedId === m.id ? '✓ Copied' : '⎘ Copy'}
+                            </button>
+                          )}
+                        </div>
+                      </>
                   }
-                  <div className="update-meta">
-                    {fmtTime(m.timestamp)}
-                    {m.source === 'eod'    && <span className="update-eod-tag">EOD</span>}
-                    {m.source === 'update' && <span className="update-tag">UPDATE</span>}
-                    {m.source === 'ai'     && <span className="update-ai-tag">AI ASSIST</span>}
-                    {m.source === 'agenda' && <span className="update-tag" style={{background:'#fff8e7',color:'#b45309',borderColor:'#f59e0b'}}>AGENDA</span>}
-                  </div>
-                  {m.source === 'ai' && (
-                    <button className="thread-copy-btn" onClick={() => { navigator.clipboard.writeText(m.content); setCopiedId(m.id); setTimeout(() => setCopiedId(null), 1500); }}>
-                      {copiedId === m.id ? '✓ Copied' : '⎘ Copy'}
-                    </button>
-                  )}
                 </div>
               ))}
             </div>
@@ -1418,7 +1817,8 @@ No preamble, no explanation — just the JSON.`
             <div className="thread-bottom">
               <div className="thread-mode-row">
                 <button className={`thread-mode-btn ${threadMode==='log' ? 'active' : ''}`} onClick={() => setThreadMode('log')}>📝 Log</button>
-                <button className={`thread-mode-btn ${threadMode==='assist' ? 'active' : ''}`} onClick={() => setThreadMode('assist')}>✨ Assist</button>
+                <button className={`thread-mode-btn ${threadMode==='assist' ? 'active' : ''}`} onClick={() => setThreadMode('assist')}>✨ AI Assist</button>
+                <button className="thread-mode-btn" onClick={() => { setShowDecisionModal(true); handleSuggestClick(task); }}>🔮 AI Suggest</button>
               </div>
               <div className="thread-input-row">
                 <textarea ref={threadTextareaRef} className="thread-textarea" value={threadInput} onChange={e => setThreadInput(e.target.value)}
@@ -1428,9 +1828,6 @@ No preamble, no explanation — just the JSON.`
                 <button className="send-btn" onClick={() => threadMode === 'assist' ? handleThreadAssist(threadInput) : addUpdate(activeThread, threadInput)} disabled={!threadInput.trim() || threadAiLoading}>
                   {threadAiLoading ? '…' : '+'}
                 </button>
-              </div>
-              <div className="thread-mode-label">
-                {threadMode === 'log' ? '📝 Log Mode' : '✨ AI Assist'}
               </div>
             </div>
           </div>
@@ -1442,7 +1839,7 @@ No preamble, no explanation — just the JSON.`
         return msgs?.length ? new Date(msgs[msgs.length - 1].timestamp).getTime() : 0;
       };
       const sortDir = threadSort.dir === 'asc' ? 1 : -1;
-      const sortedIds = Object.keys(tasks).sort((a, b) => {
+      const sortFn = (a, b) => {
         const ta = tasks[a], tb = tasks[b];
         if (threadSort.by === 'lastUpdate') return (getLastUpdate(a) - getLastUpdate(b)) * sortDir;
         if (threadSort.by === 'due') return (new Date(ta.dueDate||'9999-12-31') - new Date(tb.dueDate||'9999-12-31')) * sortDir;
@@ -1451,10 +1848,57 @@ No preamble, no explanation — just the JSON.`
           return ((o[ta.status]||0) - (o[tb.status]||0)) * sortDir;
         }
         return 0;
-      });
+      };
+      const allIds = Object.keys(tasks);
+      const activeIds = allIds.filter(id => tasks[id].status !== 'done').sort(sortFn);
+      const doneIds   = allIds.filter(id => tasks[id].status === 'done').sort(sortFn);
       const setSortBy = (key) => setThreadSort(prev =>
         prev.by === key ? { ...prev, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { by: key, dir: 'desc' }
       );
+
+      const renderThreadCard = (id) => {
+        const task    = tasks[id];
+        const thread  = threads[id] || { messages: [] };
+        const updates = thread.messages?.length || 0;
+        const lastTs  = thread.messages?.length ? thread.messages[thread.messages.length - 1].timestamp : null;
+        const taskLbls = (task.labels||[]).map(lid => labels.find(l => l.id === lid)).filter(Boolean);
+        const hasEod    = thread.messages?.some(m => m.source === 'eod');
+        const hasAgenda = thread.messages?.some(m => m.source === 'agenda');
+        return (
+          <div key={id} className="thread-card" onClick={() => setActiveThread(id)}>
+            <div className="thread-card-top">
+              <div className="thread-card-title">{task.title}</div>
+              <span className={`status-chip ${task.status}`} style={{ fontSize: 10, flexShrink: 0 }}>{STATUS_OPTIONS.find(s=>s.value===task.status)?.label||task.status}</span>
+            </div>
+            <div className="thread-card-meta">
+              {task.dueDate ? `Due ${fmtDate(task.dueDate)}` : 'No due date'}
+              {taskLbls.map(lbl => <span key={lbl.id} style={{ color: lbl.color, fontWeight: 600 }}> · {lbl.label}</span>)}
+              {isOverdue(task.dueDate, task.status) && ' · ⚠️ Overdue'}
+            </div>
+            <div className="thread-card-footer">
+              <div style={{ display:'flex', alignItems:'center', gap:6, flexWrap:'wrap' }}>
+                <span className="thread-update-chip">🧵 {updates} update{updates !== 1 ? 's' : ''}</span>
+                {task.email && (
+                  <button className="gmail-card-btn"
+                    onClick={e => { e.stopPropagation(); window.open(task.email, '_blank'); }}
+                    title="Open in Gmail">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="16" height="16">
+                      <path fill="#4caf50" d="M45,16.2l-5,2.75l-5,4.75L35,40h7c1.657,0,3-1.343,3-3V16.2z"/>
+                      <path fill="#1e88e5" d="M3,16.2l3.614,1.71L13,23.7V40H6c-1.657,0-3-1.343-3-3V16.2z"/>
+                      <polygon fill="#e53935" points="35,11.2 24,19.45 13,11.2 12,17 13,23.7 24,31.95 35,23.7 36,17"/>
+                      <path fill="#c62828" d="M3,12.298V16.2l10,7.5V11.2L9.876,8.859C9.132,8.301,8.228,8,7.298,8h0C4.924,8,3,9.924,3,12.298z"/>
+                      <path fill="#fbc02d" d="M45,12.298V16.2l-10,7.5V11.2l3.124-2.341C38.868,8.301,39.772,8,40.702,8h0 C43.076,8,45,9.924,45,12.298z"/>
+                    </svg>
+                  </button>
+                )}
+                {hasEod    && <span className="thread-source-tag eod-tag">EOD LOG</span>}
+                {hasAgenda && <span className="thread-source-tag agenda-tag">AGENDA LOG</span>}
+              </div>
+              {lastTs && <span className="thread-last-update">{timeAgo(lastTs)}</span>}
+            </div>
+          </div>
+        );
+      };
 
       return (
         <div>
@@ -1467,46 +1911,16 @@ No preamble, no explanation — just the JSON.`
             ))}
           </div>
           <div className="threads-list">
-            {sortedIds.length === 0 && <div className="thread-empty">No threads yet. Tasks added to the board auto-create a thread.</div>}
-            {sortedIds.map(id => {
-              const task    = tasks[id];
-              const thread  = threads[id] || { messages: [] };
-              const updates = thread.messages?.length || 0;
-              const lastTs  = thread.messages?.length ? thread.messages[thread.messages.length - 1].timestamp : null;
-              const col     = categories.find(c => c.id === task.category);
-              return (
-                <div key={id} className="thread-card" onClick={() => setActiveThread(id)}>
-                  <div className="thread-card-top">
-                    <div className="thread-card-title">{task.title}</div>
-                    <span className={`status-chip ${task.status}`} style={{ fontSize: 10, flexShrink: 0 }}>{STATUS_OPTIONS.find(s=>s.value===task.status)?.label||task.status}</span>
-                  </div>
-                  <div className="thread-card-meta">
-                    {task.dueDate ? `Due ${fmtDate(task.dueDate)}` : 'No due date'}
-                    {col && <span style={{ color: col.color, fontWeight: 600 }}> · {col.label}</span>}
-                    {isOverdue(task.dueDate, task.status) && ' · ⚠️ Overdue'}
-                  </div>
-                  <div className="thread-card-footer">
-                    <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-                      <span className="thread-update-chip">🧵 {updates} update{updates !== 1 ? 's' : ''}</span>
-                      {task.email && (
-                        <button className="gmail-card-btn"
-                          onClick={e => { e.stopPropagation(); window.open(task.email, '_blank'); }}
-                          title="Open in Gmail">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="16" height="16">
-                            <path fill="#4caf50" d="M45,16.2l-5,2.75l-5,4.75L35,40h7c1.657,0,3-1.343,3-3V16.2z"/>
-                            <path fill="#1e88e5" d="M3,16.2l3.614,1.71L13,23.7V40H6c-1.657,0-3-1.343-3-3V16.2z"/>
-                            <polygon fill="#e53935" points="35,11.2 24,19.45 13,11.2 12,17 13,23.7 24,31.95 35,23.7 36,17"/>
-                            <path fill="#c62828" d="M3,12.298V16.2l10,7.5V11.2L9.876,8.859C9.132,8.301,8.228,8,7.298,8h0C4.924,8,3,9.924,3,12.298z"/>
-                            <path fill="#fbc02d" d="M45,12.298V16.2l-10,7.5V11.2l3.124-2.341C38.868,8.301,39.772,8,40.702,8h0 C43.076,8,45,9.924,45,12.298z"/>
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                    {lastTs && <span className="thread-last-update">{timeAgo(lastTs)}</span>}
-                  </div>
-                </div>
-              );
-            })}
+            {activeIds.length === 0 && doneIds.length === 0 && <div className="thread-empty">No threads yet. Tasks added to the board auto-create a thread.</div>}
+            {activeIds.map(id => renderThreadCard(id))}
+            {doneIds.length > 0 && (
+              <div className="done-threads-section">
+                <button className="done-threads-toggle" onClick={() => setShowDoneThreads(p => !p)}>
+                  {showDoneThreads ? '▼' : '▶'} Done ({doneIds.length})
+                </button>
+                {showDoneThreads && doneIds.map(id => renderThreadCard(id))}
+              </div>
+            )}
           </div>
         </div>
       );
@@ -1522,19 +1936,47 @@ No preamble, no explanation — just the JSON.`
         <div className="notifs-wrap">
           {notifications.length === 0 && <div className="empty-state">No notifications yet.<br/>Run 📊 Generate EOD to create one.</div>}
           {notifications.map(n => (
-            <div key={n.id} className={`notif-card ${n.read ? 'is-read' : ''}`}>
-              <div className="notif-time">{fmtTime(n.timestamp)}</div>
-              <div className="notif-body fmt" dangerouslySetInnerHTML={{ __html: fmtHtml(n.content) }}/>
-              <div className="notif-actions">
-                <button className={`notif-action-btn copy-btn ${copiedId === n.id ? 'copied' : ''}`} onClick={() => handleCopy(n.id, n.content)}>
-                  {copiedId === n.id ? '✓ Copied!' : '📋 Copy Text'}
-                </button>
-                {!n.read && (
-                  <button className="notif-action-btn" onClick={() => setNotifications(prev => prev.map(x => x.id === n.id ? {...x, read:true} : x))}>
-                    Mark Read
-                  </button>
-                )}
+            <div key={n.id} className={`notif-card ${n.sent ? 'is-sent' : n.read ? 'is-read' : ''}`}>
+              <div className="notif-header">
+                <div>
+                  <div className="notif-time">Created: {fmtTime(n.timestamp)}</div>
+                  {n.sent && n.sentAt && <div className="notif-sent-time">Sent: {fmtSent(n.sentAt)}</div>}
+                </div>
+                <button className="notif-delete-btn"
+                  onClick={() => { if (confirm('Delete this notification?')) setNotifications(prev => prev.filter(x => x.id !== n.id)); }}
+                  title="Delete notification">×</button>
               </div>
+              {editingNotifId === n.id
+                ? <>
+                    <textarea className="notif-edit-area" value={editingNotifText}
+                      onChange={e => setEditingNotifText(e.target.value)} autoFocus/>
+                    <div className="notif-actions">
+                      <button className="notif-action-btn" style={{background:'var(--accent)',color:'white',borderColor:'var(--accent)'}}
+                        onClick={() => {
+                          setNotifications(prev => prev.map(x => x.id === n.id ? {...x, content: editingNotifText} : x));
+                          setEditingNotifId(null); setEditingNotifText('');
+                        }}>💾 Save</button>
+                      <button className="notif-action-btn"
+                        onClick={() => { setEditingNotifId(null); setEditingNotifText(''); }}>Cancel</button>
+                    </div>
+                  </>
+                : <>
+                    <div className="notif-body fmt" dangerouslySetInnerHTML={{ __html: fmtHtml(n.content) }}/>
+                    <div className="notif-actions">
+                      <button className={`notif-action-btn copy-btn ${copiedId === n.id ? 'copied' : ''}`} onClick={() => handleCopy(n.id, n.content)}>
+                        {copiedId === n.id ? '✓ Copied!' : '📋 Copy Text'}
+                      </button>
+                      <button className="notif-action-btn"
+                        onClick={() => { setEditingNotifId(n.id); setEditingNotifText(n.content); }}>✏️ Edit</button>
+                      {!n.sent && (
+                        <button className="notif-action-btn"
+                          onClick={() => setNotifications(prev => prev.map(x => x.id === n.id ? {...x, sent: true, sentAt: now()} : x))}>
+                          ✉️ Mark as Sent
+                        </button>
+                      )}
+                    </div>
+                  </>
+              }
             </div>
           ))}
         </div>
@@ -1643,55 +2085,108 @@ No preamble, no explanation — just the JSON.`
           {tab === 'notifications' && renderNotifications()}
           {tab === 'settings'      && renderSettings()}
         </div>
-        {editTask && <TaskModal task={editTask} categories={categories} onSave={saveTask} onDelete={deleteTask} onClose={() => setEditTask(null)}/>}
-        {showCatSettings && <CategorySettingsModal categories={categories} onSave={saveCategories} onClose={() => setShowCatSettings(false)}/>}
+        {editTask && <TaskModal task={editTask} labels={labels} onSave={saveTask} onDelete={deleteTask} onClose={() => setEditTask(null)}/>}
+        {showCatSettings && <LabelSettingsModal labels={labels} onSave={saveLabels} onClose={() => setShowCatSettings(false)}/>}
         {showDecisionModal && activeThread && tasks[activeThread] && (
-          <div className="overlay" onClick={e => { if (e.target.classList.contains('overlay')) { setShowDecisionModal(false); setDecisionDraft(null); setDecisionDraftQuestion(null); } }}>
+          <div className="overlay" onClick={e => { if (e.target.classList.contains('overlay')) { setShowDecisionModal(false); setDecisionDraft(null); setDecisionDraftQuestion(null); setConfirmDecisionReplace(false); } }}>
             <div className="modal" style={{ maxHeight: '80vh' }}>
               <div className="modal-handle"/>
               <div className="modal-hdr">
                 <span className="modal-hdr-title">🔮 Decision</span>
-                <button className="icon-btn" onClick={() => { setShowDecisionModal(false); setDecisionDraft(null); setDecisionDraftQuestion(null); }}>×</button>
+                <button className="icon-btn" onClick={() => { setShowDecisionModal(false); setDecisionDraft(null); setDecisionDraftQuestion(null); setConfirmDecisionReplace(false); }}>×</button>
               </div>
-              <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 12 }}>
-                {tasks[activeThread].decisionQuestion ? tasks[activeThread].decisionQuestion : <em>No decision question set on this task.</em>}
+              {confirmDecisionReplace
+                ? <div>
+                    <div style={{ fontSize: 12, fontWeight: 700, color: '#b45309', marginBottom: 10, background: '#fff8e7', padding: '8px 12px', borderRadius: 8 }}>
+                      ⚠️ This task already has a decision set. Generating new suggestions will replace it.
+                    </div>
+                    {tasks[activeThread].decisionQuestion && (
+                      <div style={{ fontSize: 13, marginBottom: 8 }}>
+                        <strong>Current question:</strong><br/>{tasks[activeThread].decisionQuestion}
+                      </div>
+                    )}
+                    {tasks[activeThread].decisionOptions && (
+                      <div style={{ fontSize: 13, marginBottom: 14, whiteSpace: 'pre-wrap', background: 'var(--surface)', borderRadius: 8, padding: '8px 10px', border: '1px solid var(--border)' }}>
+                        <strong>Current options:</strong><br/>{tasks[activeThread].decisionOptions}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <button className="decision-suggest-btn" onClick={() => { setConfirmDecisionReplace(false); suggestDecisionOptions(tasks[activeThread]); }}>
+                        Replace with AI Suggestions
+                      </button>
+                      <button className="decision-draft-cancel" onClick={() => { setConfirmDecisionReplace(false); setShowDecisionModal(false); }}>
+                        Keep Existing
+                      </button>
+                    </div>
+                  </div>
+                : <>
+                    <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 12 }}>
+                      {tasks[activeThread].decisionQuestion ? tasks[activeThread].decisionQuestion : <em>No decision question set on this task.</em>}
+                    </div>
+                    {decisionDraftLoading && (
+                      <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text2)' }}>
+                        <div className="typing-dots"><span/><span/><span/></div>
+                        <div style={{ marginTop: 8, fontSize: 12 }}>Generating options…</div>
+                      </div>
+                    )}
+                    {!decisionDraftLoading && decisionDraft !== null && (
+                      <>
+                        {decisionDraftQuestion && (
+                          <label className="decision-checkbox-item" style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
+                            <input type="checkbox" checked={decisionDraftQuestion.use}
+                              onChange={() => setDecisionDraftQuestion(prev => ({ ...prev, use: !prev.use }))}/>
+                            <span><strong style={{ color: '#8b5cf6' }}>Question: </strong>{decisionDraftQuestion.text}</span>
+                          </label>
+                        )}
+                        <div className="decision-checkbox-list">
+                          {(Array.isArray(decisionDraft) ? decisionDraft : []).map((item, i) => (
+                            <label key={i} className="decision-checkbox-item">
+                              <input type="checkbox" checked={item.checked}
+                                onChange={() => setDecisionDraft(prev => prev.map((it, idx) => idx === i ? { ...it, checked: !it.checked } : it))}/>
+                              <span>{item.text}</span>
+                            </label>
+                          ))}
+                        </div>
+                        <div className="decision-draft-btns" style={{ marginTop: 14 }}>
+                          <button className="decision-draft-cancel"
+                            onClick={() => addMoreDecisionOptions(tasks[activeThread])}
+                            disabled={decisionDraftLoading}>➕ Add More</button>
+                          <button className="decision-draft-save"
+                            onClick={() => { saveDecisionDraft(); setShowDecisionModal(false); }}
+                            disabled={!Array.isArray(decisionDraft) || !decisionDraft.some(i => i.checked)}>Save Checked</button>
+                          <button className="decision-draft-cancel"
+                            onClick={() => { setShowDecisionModal(false); setDecisionDraft(null); setDecisionDraftQuestion(null); }}>Cancel</button>
+                        </div>
+                      </>
+                    )}
+                  </>
+              }
+            </div>
+          </div>
+        )}
+        {contextPopupId && tasks[contextPopupId] && (
+          <div className="overlay" onClick={e => { if (e.target.classList.contains('overlay')) setContextPopupId(null); }}>
+            <div className="modal" style={{ maxHeight: '75vh' }}>
+              <div className="modal-handle"/>
+              <div className="modal-hdr">
+                <span className="modal-hdr-title">📝 Current Summary</span>
+                <button className="icon-btn" onClick={() => setContextPopupId(null)}>×</button>
               </div>
-              {decisionDraftLoading && (
-                <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text2)' }}>
-                  <div className="typing-dots"><span/><span/><span/></div>
-                  <div style={{ marginTop: 8, fontSize: 12 }}>Generating options…</div>
-                </div>
-              )}
-              {!decisionDraftLoading && decisionDraft !== null && (
-                <>
-                  {decisionDraftQuestion && (
-                    <label className="decision-checkbox-item" style={{ marginBottom: 10, paddingBottom: 10, borderBottom: '1px solid var(--border)' }}>
-                      <input type="checkbox" checked={decisionDraftQuestion.use}
-                        onChange={() => setDecisionDraftQuestion(prev => ({ ...prev, use: !prev.use }))}/>
-                      <span><strong style={{ color: '#8b5cf6' }}>Question: </strong>{decisionDraftQuestion.text}</span>
-                    </label>
-                  )}
-                  <div className="decision-checkbox-list">
-                    {(Array.isArray(decisionDraft) ? decisionDraft : []).map((item, i) => (
-                      <label key={i} className="decision-checkbox-item">
-                        <input type="checkbox" checked={item.checked}
-                          onChange={() => setDecisionDraft(prev => prev.map((it, idx) => idx === i ? { ...it, checked: !it.checked } : it))}/>
-                        <span>{item.text}</span>
-                      </label>
-                    ))}
+              <div style={{ fontSize: 13, color: 'var(--text2)', marginBottom: 10, fontWeight: 500 }}>
+                {tasks[contextPopupId].title}
+              </div>
+              {tasks[contextPopupId].context
+                ? <div style={{ fontSize: 14, lineHeight: 1.65, whiteSpace: 'pre-wrap', color: 'var(--text)', background: 'var(--surface)', borderRadius: 10, padding: '12px 14px' }}>
+                    {tasks[contextPopupId].context}
                   </div>
-                  <div className="decision-draft-btns" style={{ marginTop: 14 }}>
-                    <button className="decision-draft-cancel"
-                      onClick={() => addMoreDecisionOptions(tasks[activeThread])}
-                      disabled={decisionDraftLoading}>➕ Add More</button>
-                    <button className="decision-draft-save"
-                      onClick={() => { saveDecisionDraft(); setShowDecisionModal(false); }}
-                      disabled={!Array.isArray(decisionDraft) || !decisionDraft.some(i => i.checked)}>Save Checked</button>
-                    <button className="decision-draft-cancel"
-                      onClick={() => { setShowDecisionModal(false); setDecisionDraft(null); setDecisionDraftQuestion(null); }}>Cancel</button>
+                : <div style={{ fontSize: 13, color: 'var(--text2)', fontStyle: 'italic' }}>
+                    No context yet. Add updates to this task's thread — context auto-generates after each update.
                   </div>
-                </>
-              )}
+              }
+              <div style={{ marginTop: 14, display: 'flex', gap: 8 }}>
+                <button className="btn btn-ghost" style={{ flex: 1, fontSize: 13 }} onClick={() => { setContextPopupId(null); setEditTask({ ...tasks[contextPopupId], _exists: true }); }}>✏️ Edit in Task</button>
+                <button className="btn btn-ghost" style={{ flex: 1, fontSize: 13 }} onClick={() => setContextPopupId(null)}>Close</button>
+              </div>
             </div>
           </div>
         )}
@@ -1723,7 +2218,7 @@ No preamble, no explanation — just the JSON.`
 <h3 style="margin:0 0 6px;font-size:15px">3. The 5 Tabs</h3>
 <p>
 💬 <strong>Chat</strong> — AI assistant, EOD, Agenda, quick actions<br>
-📋 <strong>Board</strong> — Task board by category<br>
+📋 <strong>Board</strong> — Task board grouped by status, label, or due date<br>
 🧵 <strong>Threads</strong> — Full update history per task<br>
 🔔 <strong>Notifs</strong> — EOD summaries and notifications<br>
 ⚙️ <strong>Settings</strong> — API key, model, dark mode, data</p>
@@ -1734,10 +2229,10 @@ No preamble, no explanation — just the JSON.`
 <p><strong>Create a task:</strong> Tap <strong>+ Add Task Manually</strong> on the Board, or type <code>Add task: [description]</code> in Chat.</p>
 <p style="margin-top:8px"><strong>Task fields:</strong><br>
 • <strong>Title</strong> — What needs to be done (required)<br>
-• <strong>Category</strong> — Which column it belongs to<br>
+• <strong>Labels</strong> — Multi-select tags (e.g. Urgent, Normal, Low Priority — or any custom label)<br>
 • <strong>Due Date</strong> — When it's due (required)<br>
-• <strong>Status</strong> — Open / In Progress / Decision / Done<br>
-• <strong>Notes</strong> — Context or background<br>
+• <strong>Status</strong> — Open / In Progress / Decision / Done (also determines Board column)<br>
+• <strong>Notes</strong> — Manual background notes; never auto-updated<br>
 • <strong>Decision Question</strong> — What needs to be decided?<br>
 • <strong>Decision Options</strong> — Numbered choices<br>
 • <strong>Decision Maker</strong> — Tarek or Symon (routes to correct EOD)<br>
